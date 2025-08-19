@@ -1,0 +1,12 @@
+{
+  "name": "@visitoriq/sdk",
+  "version": "1.0.0",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsup src/index.ts --format iife --global-name visitoriq --minify --out-dir dist --target es2020"
+  },
+  "devDependencies": {
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.2"
+  }
+}

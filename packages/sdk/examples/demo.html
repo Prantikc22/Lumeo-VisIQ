@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>VisitorIQ SDK Demo</title>
+</head>
+<body>
+  <h1>VisitorIQ SDK Demo</h1>
+  <input id="email" type="email" placeholder="Email (optional)" style="margin-bottom:8px;display:block;" />
+  <button id="run">Run VisitorIQ</button>
+  <div id="block-message" style="color:red;font-weight:bold;display:none;margin-top:12px;"></div>
+  <pre id="output"></pre>
+  <script src="sha256.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@thumbmarkjs/thumbmarkjs/dist/thumbmark.umd.js"></script>
+  <script src="index.min.js"></script>
+  <script>
+    document.getElementById('run').onclick = async function() {
+      const runBtn = document.getElementById('run');
+      const blockMsg = document.getElementById('block-message');
+      // Use ThumbmarkJS to get a browser fingerprint
+      const tm = new ThumbmarkJS.Thumbmark();
+      const thumbmarkResult = await tm.get();
+      const fingerprint_hash = thumbmarkResult.thumbmark;
+      // Check if blocked
+      const siteKey = '37b4c075a86a8570a14bab24bdb491f206c736ec05c71cec7f294f2357f7ef74';
+const resp = await fetch(`http://localhost:3000/api/blocks?siteKey=${siteKey}`);
+      const data = await resp.json();
+      if (data.blocks && data.blocks.some(b => b.value === fingerprint_hash)) {
+        blockMsg.textContent = 'Access denied: Your device is blocked.';
+        blockMsg.style.display = 'block';
+        runBtn.disabled = true;
+        document.getElementById('output').textContent = '';
+        return;
+      } else {
+        blockMsg.style.display = 'none';
+      }
+      // Show Thumbmark result in the output
+      document.getElementById('output').textContent = 'ThumbmarkJS:\n' + JSON.stringify(thumbmarkResult, null, 2) + '\n\n';
+      // Get email value
+      const email = document.getElementById('email').value;
+      // Run BotD OSS using new CDN import
+      import('https://openfpcdn.io/botd/v1')
+          .then((Botd) => Botd.load())
+          .then((botd) => botd.detect())
+          .then((botdResult) => {
+            document.getElementById('output').textContent += '\nBotD OSS:\n' + JSON.stringify(botdResult, null, 2);
+            // Send to backend
+            // Required fields for backend
+            const siteKey = '37b4c075a86a8570a14bab24bdb491f206c736ec05c71cec7f294f2357f7ef74';
+            const fingerprint_hash = thumbmarkResult.thumbmark;
+            const userAgent = navigator.userAgent;
+            const language = navigator.language;
+            const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+            const resolution = `${window.screen.width}x${window.screen.height}`;
+
+            fetch('http://localhost:3000/api/collect-visitor', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                siteKey,
+                fingerprint_hash,
+                userAgent,
+                language,
+                timezone,
+                resolution,
+                referrer: document.referrer || '',
+                email: email,
+                thumbmark_signals: thumbmarkResult,
+                thumbmark_details: thumbmarkResult,
+                botd_result: botdResult
+              })
+            })
+            .then(response => response.json())
+            .then(data => {
+              document.getElementById('output').textContent += '\n\nVisitorIQ Response:\n' + JSON.stringify(data, null, 2);
+            })
+            .catch(error => {
+              document.getElementById('output').textContent += '\n\nVisitorIQ Error:\n' + error;
+            });
+          })
+          .catch((error) => {
+            document.getElementById('output').textContent += '\nBotD OSS Error:\n' + error;
+          });
+ 
+    };
+  </script>
+</body>
+</html>
