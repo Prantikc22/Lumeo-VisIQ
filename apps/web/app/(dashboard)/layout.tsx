@@ -41,9 +41,19 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     });
   }, [router]);
 
+  // Hide sidebar ONLY for /dashboard/login, /dashboard/register, /dashboard/forgot-password
+  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
+  const isDashboardAuthPage = ["/dashboard/login", "/dashboard/register", "/dashboard/forgot-password"].includes(pathname);
+  if (isDashboardAuthPage) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <main className="w-full max-w-md p-4">{children}</main>
+      </div>
+    );
+  }
+  // Default: sidebar layout for all other dashboard pages
   return (
     <div className="min-h-screen flex bg-gray-50">
-      {/* Authenticated layout, no demo banner */}
       <aside className="w-64 bg-white border-r hidden md:flex flex-col fixed inset-y-0 left-0 z-30">
         <div className="px-6 py-5 font-bold text-xl border-b">VisitorIQ</div>
         <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto">
@@ -74,12 +84,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
       <div className="flex-1 flex flex-col md:ml-64">
         <header className="md:hidden flex items-center justify-between px-4 py-3 border-b bg-white">
           <div className="font-bold text-lg">VisitorIQ</div>
-          {/* Mobile nav toggle placeholder */}
         </header>
         <main className="flex-1 p-6">
           {children}
         </main>
       </div>
     </div>
-  )
+  );
 }

@@ -2,6 +2,9 @@
 import { useState } from "react"
 import browserSupabase from "@/app/lib/supabase-browser"
 import { useRouter } from "next/navigation"
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
 
 import { useEffect } from "react";
 
@@ -71,60 +74,56 @@ export default function RegisterPage() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4 w-full max-w-md"
-      >
-        <h2 className="text-2xl font-bold mb-6 text-center">Sign up for VisitorIQ</h2>
-        <input
-          type="text"
-          className="border rounded w-full py-2 px-3 mb-4"
-          placeholder="Full Name"
-          value={name}
-          onChange={e => setName(e.target.value)}
-          required
-        />
-        <input
-          type="text"
-          className="border rounded w-full py-2 px-3 mb-4"
-          placeholder="Location"
-          value={location}
-          onChange={e => setLocation(e.target.value)}
-          required
-        />
-        <input
-          type="email"
-          className="border rounded w-full py-2 px-3 mb-4"
-          placeholder="Email address"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          required
-        />
-        <input
-          type="password"
-          className="border rounded w-full py-2 px-3 mb-4"
-          placeholder="Password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          required
-        />
-        <input
-          type="password"
-          className="border rounded w-full py-2 px-3 mb-4"
-          placeholder="Confirm Password"
-          value={confirmPassword}
-          onChange={e => setConfirmPassword(e.target.value)}
-          required
-        />
-        <button
-          type="submit"
-          className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-          disabled={loading}
-        >
-          {loading ? "Registering..." : "Sign Up"}
-        </button>
-        {message && <p className="mt-4 text-center text-sm text-gray-700">{message}</p>}
-      </form>
+      <div className="w-full max-w-md">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold text-center">Sign up for VisitorIQ</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <Input
+                type="text"
+                placeholder="Full Name"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                required
+              />
+              <Input
+                type="text"
+                placeholder="Location"
+                value={location}
+                onChange={e => setLocation(e.target.value)}
+                required
+              />
+              <Input
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+              />
+              <Input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+              />
+              <Input
+                type="password"
+                placeholder="Confirm Password"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                required
+              />
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Registering..." : "Sign Up"}
+              </Button>
+              {message && <p className="mt-2 text-center text-sm text-red-600">{message}</p>}
+            </form>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }

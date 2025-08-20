@@ -36,7 +36,7 @@ const resp = await fetch(`http://localhost:3000/api/blocks?siteKey=${siteKey}`);
       }
       // Show Thumbmark result in the output
       document.getElementById('output').textContent = 'ThumbmarkJS:\n' + JSON.stringify(thumbmarkResult, null, 2) + '\n\n';
-      // Get email value
+      // Get email value (optional)
       const email = document.getElementById('email').value;
       // Run BotD OSS using new CDN import
       import('https://openfpcdn.io/botd/v1')

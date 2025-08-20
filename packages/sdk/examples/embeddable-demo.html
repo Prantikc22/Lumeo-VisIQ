@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>VisitorIQ Embeddable Snippet Demo</title>
+</head>
+<body>
+  <h1>VisitorIQ Embeddable Snippet Demo</h1>
+  <div id="block-message" style="color:red;font-weight:bold;display:none;margin-top:12px;"></div>
+  <pre id="output"></pre>
+  <!-- Embeddable VisitorIQ snippet: Place this in your <head> or before </body> -->
+  <script>
+    window.visitorIQConfig = {
+      siteKey: 'YOUR_SITE_KEY_HERE', // Replace with your actual siteKey
+      onBlock: function() {
+        document.getElementById('block-message').textContent = 'Access denied: Your device is blocked.';
+        document.getElementById('block-message').style.display = 'block';
+      },
+      onComplete: function(result) {
+        document.getElementById('output').textContent = 'VisitorIQ Result:\n' + JSON.stringify(result, null, 2);
+      }
+    };
+  </script>
+  <script src="/sdk/visitoriq-embed.js"></script>
+  <!-- This script should be served by your backend or CDN as the embeddable SDK -->
+</body>
+</html>

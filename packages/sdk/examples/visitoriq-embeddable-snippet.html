@@ -1,0 +1,32 @@
+<!-- VisitorIQ Embeddable Snippet: Copy and paste this into your site's <head> or just before </body> -->
+<script src="https://cdn.jsdelivr.net/npm/tiny-sha256@1.0.2/sha256.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@thumbmarkjs/thumbmarkjs/dist/thumbmark.umd.js"></script>
+<script>
+  window.visitorIQConfig = {
+    siteKey: '9789891f06e1b533a3d9ff387f22a85a69f33c134204ac7dd5aa0fc21c733d07', // Replace with your actual siteKey from the dashboard
+    endpoint: 'http://localhost:3000/api/collect-visitor', // <-- Add this line
+    onBlock: function() { alert('Access denied: Your device is blocked.'); },
+    onComplete: function(result) { console.log('VisitorIQ Result:', result); }
+  };
+</script>
+<script src="http://localhost:3000/sdk/index.min.js" async></script>
+<script>
+  // Auto-initialize after all scripts are loaded
+  function viqAutoInit() {
+    if (window.visitorIQConfig && window.visitoriq && window.visitoriq.init && window.ThumbmarkJS && window.sha256) {
+      window.visitoriq.init(window.visitorIQConfig);
+    } else {
+      setTimeout(viqAutoInit, 100);
+    }
+  }
+  viqAutoInit();
+</script>
+<!-- End VisitorIQ Snippet -->
+<!--
+Instructions for your dashboard:
+- Replace YOUR_SITE_KEY_HERE with the user's actual siteKey for the site.
+- Show this snippet in a <pre> or code block for easy copy-paste.
+- Provide a "Copy" button for convenience.
+- Tell users to paste it into their <head> or before </body> on any/all pages they want to track or protect.
+- No further setup required!
+-->
