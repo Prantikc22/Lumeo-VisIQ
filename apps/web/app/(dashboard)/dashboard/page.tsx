@@ -18,8 +18,10 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend)
 interface DashboardStats {
   eventsToday: number
   highRiskToday: number
-  totalVisitors: number
-  uniqueVisitors: number
+  totalVisitors: number // cumulative
+  uniqueVisitors: number // cumulative
+  dailyVisitors: number
+  dailyUniqueVisitors: number
   topCountries: { country: string; count: number }[]
   riskBreakdown: { low: number; medium: number; high: number }
   recentActivity: any[]
@@ -36,7 +38,12 @@ export default function DashboardOverview() {
     setLoading(true)
     setError("")
     try {
-      const res = await fetch("/api/dashboard/stats")
+      // Get Supabase session for access token
+      const { data: { session } } = await import("@/app/lib/supabase-browser").then(m => m.default.auth.getSession());
+      const accessToken = session?.access_token;
+      const res = await fetch("/api/dashboard/stats", {
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      });
       if (!res.ok) throw new Error("Failed to fetch stats")
       const data = await res.json()
       setStats(data)
@@ -60,11 +67,13 @@ export default function DashboardOverview() {
       {error && <div className="text-red-600">{error}</div>}
       {stats && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-            <StatCard label="Events Today" value={stats.eventsToday} />
-            <StatCard label="High Risk Today" value={stats.highRiskToday} highlight />
+          <div className="grid grid-cols-1 md:grid-cols-6 gap-6 mb-8">
             <StatCard label="Total Visitors" value={stats.totalVisitors} />
             <StatCard label="Unique Visitors" value={stats.uniqueVisitors} />
+            <StatCard label="Visitors Today" value={stats.dailyVisitors} />
+            <StatCard label="Unique Visitors Today" value={stats.dailyUniqueVisitors} />
+            <StatCard label="Events Today" value={stats.eventsToday} />
+            <StatCard label="High Risk Today" value={stats.highRiskToday} highlight />
             <Card>
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">Top Countries</CardTitle>
