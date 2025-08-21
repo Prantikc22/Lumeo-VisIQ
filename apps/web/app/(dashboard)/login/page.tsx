@@ -1,5 +1,6 @@
 "use client"
 import { useState } from "react"
+import Link from "next/link"
 import browserSupabase from "@/app/lib/supabase-browser"
 import { useRouter } from "next/navigation"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
@@ -82,7 +83,10 @@ export default function LoginPage() {
               {message && <p className="mt-2 text-center text-sm text-red-600">{message}</p>}
               <div className="mt-4 text-center text-sm text-gray-600">
                 Don&apos;t have an account?{' '}
-                <a href="/register" className="text-blue-600 hover:underline">Sign up</a>
+                <Link href={{
+                  pathname: "/register",
+                  query: Object.fromEntries(new URLSearchParams(typeof window !== "undefined" ? window.location.search : ""))
+                }} className="text-blue-600 hover:underline">Sign up</Link>
               </div>
             </form>
           </CardContent>

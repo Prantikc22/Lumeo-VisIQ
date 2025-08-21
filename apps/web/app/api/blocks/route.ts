@@ -7,6 +7,10 @@ import { createServerClient } from '@supabase/ssr';
 
 import { withCORS } from '../withCORS';
 
+export const OPTIONS = withCORS(async function OPTIONS() {
+  return new NextResponse(null, { status: 204 });
+});
+
 export const GET = withCORS(async function GET(req: Request) {
   // Get siteKey from query param
   const { searchParams } = new URL(req.url);
@@ -45,6 +49,49 @@ export const GET = withCORS(async function GET(req: Request) {
     created_at: row.created_at,
     expires_at: row.expires_at
   }));
+
+  // Only increment API usage for this user if blocks exist AND x-usage-track header is present
+  const usageTrack = req.headers.get('x-usage-track');
+  if (blocks.length > 0 && usageTrack === 'true') {
+    try {
+      const { data: site, error: siteError } = await supabase
+        .from('sites')
+        .select('user_id')
+        .eq('api_key', siteKey)
+        .maybeSingle();
+      if (site && site.user_id) {
+        const { data: usageRows, error: usageFetchErr } = await supabase
+          .from('user_api_usage')
+          .select('used, quota')
+          .eq('user_id', site.user_id)
+          .limit(1);
+        if (usageFetchErr) {
+          console.error('[BLOCKS][USAGE][GET] Failed to fetch usage row:', usageFetchErr, { user_id: site.user_id });
+        }
+        if (usageRows && usageRows.length > 0) {
+          const currentUsed = usageRows[0].used || 0;
+          const { error: usageUpdateErr } = await supabase
+            .from('user_api_usage')
+            .update({ used: currentUsed + 1, updated_at: new Date().toISOString() })
+            .eq('user_id', site.user_id);
+          if (usageUpdateErr) {
+            console.error('[BLOCKS][USAGE][GET] Failed to increment usage:', usageUpdateErr, { user_id: site.user_id });
+          }
+        } else {
+          // Insert new usage row if not present
+          const { error: usageInsertErr } = await supabase
+            .from('user_api_usage')
+            .insert({ user_id: site.user_id, used: 1, quota: 0, updated_at: new Date().toISOString() });
+          if (usageInsertErr) {
+            console.error('[BLOCKS][USAGE][GET] Failed to insert usage row:', usageInsertErr, { user_id: site.user_id });
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[BLOCKS][USAGE][GET] Unexpected error incrementing API usage:', err);
+    }
+  }
+
   return new NextResponse(JSON.stringify({ blocks }), { status: 200 });
 });
 
@@ -101,5 +148,46 @@ export const POST = withCORS(async function POST(req: Request) {
   else return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
   const { data, error } = await supabase.from('manual_blocks').insert(insert).select().single();
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // Increment API usage for this user (blocking a fingerprint/IP counts as usage)
+  try {
+    if (site.user_id) {
+      const { data: usageRows, error: usageFetchErr } = await supabase
+        .from('user_api_usage')
+        .select('used, quota, cycle_end')
+        .eq('user_id', site.user_id)
+        .limit(1);
+      if (usageFetchErr) {
+        console.error('[BLOCKS][USAGE] Failed to fetch usage row:', usageFetchErr, { user_id: site.user_id });
+      }
+      if (usageRows && usageRows.length > 0) {
+        const { used, quota, cycle_end } = usageRows[0];
+        const now = new Date();
+        if (!cycle_end || new Date(cycle_end) < now) {
+          return NextResponse.json({ error: 'quota_exceeded', details: 'API quota reached or subscription expired.' }, { status: 429 });
+        }
+        const currentUsed = used || 0;
+        // quota logic continues...
+        const { error: usageUpdateErr } = await supabase
+          .from('user_api_usage')
+          .update({ used: currentUsed + 1, updated_at: new Date().toISOString() })
+          .eq('user_id', site.user_id);
+        if (usageUpdateErr) {
+          console.error('[BLOCKS][USAGE] Failed to increment usage:', usageUpdateErr, { user_id: site.user_id });
+        }
+      } else {
+        // Insert new usage row if not present
+        const { error: usageInsertErr } = await supabase
+          .from('user_api_usage')
+          .insert({ user_id: site.user_id, used: 1, quota: 0, updated_at: new Date().toISOString() });
+        if (usageInsertErr) {
+          console.error('[BLOCKS][USAGE] Failed to insert usage row:', usageInsertErr, { user_id: site.user_id });
+        }
+      }
+    }
+  } catch (err) {
+    console.error('[BLOCKS][USAGE] Unexpected error incrementing API usage:', err, { user_id: site.user_id });
+  }
+
   return NextResponse.json({ block: data });
 });

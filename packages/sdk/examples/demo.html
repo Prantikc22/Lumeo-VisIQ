@@ -22,8 +22,8 @@
       const thumbmarkResult = await tm.get();
       const fingerprint_hash = thumbmarkResult.thumbmark;
       // Check if blocked
-      const siteKey = '37b4c075a86a8570a14bab24bdb491f206c736ec05c71cec7f294f2357f7ef74';
-const resp = await fetch(`http://localhost:3000/api/blocks?siteKey=${siteKey}`);
+      const siteKey = 'f70faa7a447bb94d4df5528628843e084ef078180fefa219a0566d3cae77c7ec';
+const resp = await fetch(`http://localhost:3000/api/blocks?siteKey=${siteKey}`, { headers: { 'x-usage-track': 'true' } });
       const data = await resp.json();
       if (data.blocks && data.blocks.some(b => b.value === fingerprint_hash)) {
         blockMsg.textContent = 'Access denied: Your device is blocked.';
@@ -46,7 +46,7 @@ const resp = await fetch(`http://localhost:3000/api/blocks?siteKey=${siteKey}`);
             document.getElementById('output').textContent += '\nBotD OSS:\n' + JSON.stringify(botdResult, null, 2);
             // Send to backend
             // Required fields for backend
-            const siteKey = '37b4c075a86a8570a14bab24bdb491f206c736ec05c71cec7f294f2357f7ef74';
+            const siteKey = 'f70faa7a447bb94d4df5528628843e084ef078180fefa219a0566d3cae77c7ec';
             const fingerprint_hash = thumbmarkResult.thumbmark;
             const userAgent = navigator.userAgent;
             const language = navigator.language;
@@ -66,7 +66,7 @@ const resp = await fetch(`http://localhost:3000/api/blocks?siteKey=${siteKey}`);
                 timezone,
                 resolution,
                 referrer: document.referrer || '',
-                email: email,
+                ...(email && email.trim() ? { email } : {}),
                 thumbmark_signals: thumbmarkResult,
                 thumbmark_details: thumbmarkResult,
                 botd_result: botdResult

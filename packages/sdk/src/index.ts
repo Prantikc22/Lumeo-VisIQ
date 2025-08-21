@@ -11,6 +11,15 @@ declare global {
     visitoriq?: any;
   }
 }
+// Utility: Check if this fingerprint is blocked (calls /api/blocks)
+async function checkIfBlocked(siteKey: string, fingerprint_hash: string, apiBase: string = ''): Promise<boolean> {
+  const resp = await fetch(`${apiBase}/api/blocks?siteKey=${siteKey}`, {
+    headers: { 'x-usage-track': 'true' }
+  });
+  const data = await resp.json();
+  return data.blocks && data.blocks.some((b: any) => b.value === fingerprint_hash);
+}
+
 // UMD VisitorIQ SDK
 // Try to import sha256 from tiny-sha256, fallback to window.sha256 for browser UMD
 let sha256: (input: string) => string

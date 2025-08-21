@@ -1,12 +1,10 @@
 "use client"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import browserSupabase from "@/app/lib/supabase-browser"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { Input } from "../../../components/ui/input"
 import { Button } from "@/components/ui/button"
-
-import { useEffect } from "react";
 
 export default function RegisterPage() {
   const [name, setName] = useState("");
@@ -17,6 +15,12 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const emailParam = searchParams?.get("email") || "";
+    setEmail(emailParam);
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,7 +54,8 @@ export default function RegisterPage() {
           headers: { "Content-Type": "application/json" },
         });
       }
-      setTimeout(() => router.push("/dashboard"), 1200);
+      const next = searchParams?.get("next") || "/dashboard";
+      setTimeout(() => router.push(next), 1200);
     }
   }
 
@@ -101,6 +106,7 @@ export default function RegisterPage() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 required
+                readOnly={!!searchParams?.get("email")}
               />
               <Input
                 type="password"

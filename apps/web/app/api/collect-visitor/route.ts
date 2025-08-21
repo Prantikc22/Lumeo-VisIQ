@@ -195,11 +195,37 @@ export async function POST(req: Request) {
       finalVerdict = 'high'
     }
 
-    // Lookup site_id and repeat_signup_limit from sites table using api_key
-    const { data: siteRow, error: siteError } = await supabaseServer.from('sites').select('id, repeat_signup_limit').eq('api_key', siteKey).maybeSingle();
+    // Lookup site_id, repeat_signup_limit, and user_id from sites table using api_key
+    const { data: siteRow, error: siteError } = await supabaseServer.from('sites').select('id, repeat_signup_limit, user_id').eq('api_key', siteKey).maybeSingle();
     if (!siteRow || siteError) {
       return withCORS(NextResponse.json({ error: 'invalid_site_key', details: 'Site not found for provided siteKey' }, { status: 400 }));
     }
+
+    // Check API usage quota BEFORE running IPInfo or event insert
+    let quotaExceeded = false;
+    if (siteRow.user_id) {
+      const { data: usageRows, error: usageFetchErr } = await supabaseServer
+        .from('user_api_usage')
+        .select('used, quota, cycle_end')
+        .eq('user_id', siteRow.user_id)
+        .limit(1);
+      if (usageFetchErr) {
+        console.error('[COLLECT-VISITOR][USAGE] Failed to fetch usage row:', usageFetchErr, { user_id: siteRow.user_id });
+      }
+      if (usageRows && usageRows.length > 0) {
+        const { used, quota, cycle_end } = usageRows[0];
+        const now = new Date();
+        if (!cycle_end || new Date(cycle_end) < now) {
+          quotaExceeded = true;
+        } else if (quota > 0 && used >= quota) {
+          quotaExceeded = true;
+        }
+      }
+    }
+    if (quotaExceeded) {
+      return withCORS(NextResponse.json({ error: 'quota_exceeded', details: 'API quota reached for this account.' }, { status: 429 }));
+    }
+
     // Upsert visitor before inserting event to satisfy FK constraint
     await supabaseServer.from('visitors').upsert({
       id: visitor_id,
@@ -271,7 +297,45 @@ export async function POST(req: Request) {
       timestamp: new Date().toISOString()
     }).select('id').single()
     if (insertErr) {
+      console.error('[COLLECT-VISITOR][ERROR] Failed to insert event:', insertErr, { site_id: siteRow.id, visitor_id });
       return withCORS(NextResponse.json({ error: 'db_insert_failed', details: insertErr.message }, { status: 500 }))
+    }
+    console.log('[COLLECT-VISITOR] Event inserted successfully:', { event_id: inserted?.id, site_id: siteRow.id, visitor_id });
+
+    // Increment API usage for this user
+    try {
+      if (siteRow.user_id) {
+        // Try to increment used
+        const { data: usageRows, error: usageFetchErr } = await supabaseServer
+          .from('user_api_usage')
+          .select('used, quota')
+          .eq('user_id', siteRow.user_id)
+          .limit(1);
+        if (usageFetchErr) {
+          console.error('[COLLECT-VISITOR][USAGE] Failed to fetch usage row:', usageFetchErr, { user_id: siteRow.user_id });
+        }
+        if (usageRows && usageRows.length > 0) {
+          const currentUsed = usageRows[0].used || 0;
+          const quota = usageRows[0].quota || 0;
+          const { error: usageUpdateErr } = await supabaseServer
+            .from('user_api_usage')
+            .update({ used: currentUsed + 1, updated_at: new Date().toISOString() })
+            .eq('user_id', siteRow.user_id);
+          if (usageUpdateErr) {
+            console.error('[COLLECT-VISITOR][USAGE] Failed to increment usage:', usageUpdateErr, { user_id: siteRow.user_id });
+          }
+        } else {
+          // Insert new usage row if not present
+          const { error: usageInsertErr } = await supabaseServer
+            .from('user_api_usage')
+            .insert({ user_id: siteRow.user_id, used: 1, quota: 0, updated_at: new Date().toISOString() });
+          if (usageInsertErr) {
+            console.error('[COLLECT-VISITOR][USAGE] Failed to insert usage row:', usageInsertErr, { user_id: siteRow.user_id });
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[COLLECT-VISITOR][USAGE] Unexpected error incrementing API usage:', err, { user_id: siteRow.user_id });
     }
 
     // Get client settings

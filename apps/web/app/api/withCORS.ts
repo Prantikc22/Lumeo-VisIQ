@@ -9,7 +9,7 @@ export function withCORS(handler: any) {
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-usage-track',
         },
       });
     }
@@ -18,7 +18,7 @@ export function withCORS(handler: any) {
       if (response instanceof Response) {
         response.headers.set('Access-Control-Allow-Origin', '*');
         response.headers.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-        response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+        response.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-usage-track');
         return response;
       }
       // If handler returned non-Response, wrap it
@@ -26,7 +26,7 @@ export function withCORS(handler: any) {
         headers: {
           'Access-Control-Allow-Origin': '*',
           'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-usage-track',
           'Content-Type': 'application/json',
         },
       });
@@ -39,7 +39,7 @@ export function withCORS(handler: any) {
           headers: {
             'Access-Control-Allow-Origin': '*',
             'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+            'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-usage-track',
             'Content-Type': 'application/json',
           },
         }

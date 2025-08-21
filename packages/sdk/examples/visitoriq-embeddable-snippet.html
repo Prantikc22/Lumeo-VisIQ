@@ -3,7 +3,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@thumbmarkjs/thumbmarkjs/dist/thumbmark.umd.js"></script>
 <script>
   window.visitorIQConfig = {
-    siteKey: '9789891f06e1b533a3d9ff387f22a85a69f33c134204ac7dd5aa0fc21c733d07', // Replace with your actual siteKey from the dashboard
+    siteKey: '31db00cda275d9d4c9ab88fb19288df81c0c35161f2828e320682c6c73a8de4d', // Replace with your actual siteKey from the dashboard
     endpoint: 'http://localhost:3000/api/collect-visitor', // <-- Add this line
     onBlock: function() { alert('Access denied: Your device is blocked.'); },
     onComplete: function(result) { console.log('VisitorIQ Result:', result); }
@@ -13,8 +13,28 @@
 <script>
   // Auto-initialize after all scripts are loaded
   function viqAutoInit() {
-    if (window.visitorIQConfig && window.visitoriq && window.visitoriq.init && window.ThumbmarkJS && window.sha256) {
-      window.visitoriq.init(window.visitorIQConfig);
+    if (window.visitorIQConfig && window.ThumbmarkJS && window.sha256) {
+      // Get fingerprint hash first
+      new window.ThumbmarkJS.Thumbmark().get().then(function(thumbmarkResult) {
+        var fingerprint_hash = thumbmarkResult.thumbmark;
+        var siteKey = window.visitorIQConfig.siteKey;
+        fetch('http://localhost:3000/api/blocks?siteKey=' + encodeURIComponent(siteKey), {
+          headers: { 'x-usage-track': 'true' }
+        })
+        .then(function(resp) { return resp.json(); })
+        .then(function(data) {
+          var isBlocked = data.blocks && data.blocks.some(function(b) { return b.value === fingerprint_hash; });
+          if (isBlocked) {
+            if (typeof window.visitorIQConfig.onBlock === 'function') window.visitorIQConfig.onBlock();
+          } else {
+            // Pass thumbmarkResult to the SDK for collect-visitor
+            window.visitorIQConfig.thumbmark_details = thumbmarkResult;
+            if (window.visitoriq && window.visitoriq.init) {
+              window.visitoriq.init(window.visitorIQConfig);
+            }
+          }
+        });
+      });
     } else {
       setTimeout(viqAutoInit, 100);
     }

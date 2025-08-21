@@ -16,7 +16,7 @@ export default function BlocksPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
   // Store both id and api_key for each site
-  const [sites, setSites] = useState<{ id: string; name: string; api_key: string }[]>([])
+  const [sites, setSites] = useState<{ id: string; name: string; site_key: string }[]>([])
   const [selectedSiteKey, setSelectedSiteKey] = useState<string>("")
   const [siteNameFilter, setSiteNameFilter] = useState('');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -24,7 +24,7 @@ export default function BlocksPage() {
   // Filter and sort blocks
   const filteredBlocks = blocks.filter(block => {
     if (!siteNameFilter) return true;
-    const site = sites.find(s => s.api_key === block.site_key);
+    const site = sites.find(s => s.site_key === block.site_key);
     return site && site.name.toLowerCase().includes(siteNameFilter.toLowerCase());
   });
   filteredBlocks.sort((a, b) => {
@@ -61,8 +61,10 @@ export default function BlocksPage() {
           return;
         }
         setSites(data.sites);
-        setSelectedSiteKey(data.sites[0].api_key);
-        fetchBlocks(data.sites[0].api_key);
+        // Do NOT auto-select the first site. Let user pick, or show all blocks for all sites for debugging.
+        setSelectedSiteKey('');
+        // fetchBlocks(data.sites[0].site_key); // Do not auto-fetch
+
       } catch (err: any) {
         setError(err.message || 'Unknown error fetching sites');
         setLoading(false);
@@ -103,6 +105,21 @@ export default function BlocksPage() {
       {sites.length === 0 && !loading && (
         <div className="text-gray-500">No sites found. Please create a site first.</div>
       )}
+      {sites.length > 0 && (
+        <div className="mb-4 flex items-center gap-2">
+          <select
+            className="border px-2 py-1 rounded text-sm"
+            value={selectedSiteKey}
+            onChange={e => setSelectedSiteKey(e.target.value)}
+          >
+            <option value="">-- Select site --</option>
+            {sites.map(s => (
+              <option key={s.site_key} value={s.site_key}>{s.name} ({s.site_key})</option>
+            ))}
+          </select>
+          {selectedSiteKey && <button className="px-3 py-1 border rounded bg-blue-600 text-white" onClick={() => fetchBlocks(selectedSiteKey)}>Load Blocks</button>}
+        </div>
+      )}
       {sites.length > 0 && selectedSiteKey && !loading && (
         <div className="overflow-x-auto">
           <table className="min-w-full bg-white rounded shadow">
@@ -123,7 +140,7 @@ export default function BlocksPage() {
                   <td className="px-4 py-2 text-xs font-mono">{block.type}</td>
                   <td className="px-4 py-2 font-mono text-xs">{block.value}</td>
                   <td className="px-4 py-2 text-xs">{block.reason}</td>
-                  <td className="px-4 py-2 text-xs">{(sites.find(s => s.api_key === block.site_key)?.name) || block.site_key}</td>
+                  <td className="px-4 py-2 text-xs">{(sites.find(s => s.site_key === block.site_key)?.name) || block.site_key}</td>
                   <td className="px-4 py-2 text-xs">{new Date(block.created_at).toLocaleString()}</td>
                   <td className="px-4 py-2 text-xs">{block.expires_at ? new Date(block.expires_at).toLocaleString() : "—"}</td>
                   <td className="px-4 py-2">
