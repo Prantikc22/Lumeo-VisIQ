@@ -28,6 +28,10 @@ try {
   sha256 = require('tiny-sha256').sha256 || require('tiny-sha256')
 } catch {
   // fallback for browser UMD
+  if (!(window as any).sha256) {
+    // Inline tiny-sha256 (public domain)
+    (function(g){function l(a,b){var c=(a&65535)+(b&65535);return((a>>16)+(b>>16)+(c>>16)<<16)|c&65535}function m(a,b){return a>>>b|a<<32-b}function n(a,b){return a>>>b}function p(a,b){return a<<b}function q(a,b){return a^b}function r(a,b){return a&b}function s(a,b){return a|b}function t(a,b){return a&~b}function u(a){return m(a,2)^m(a,13)^m(a,22)}function v(a){return m(a,6)^m(a,11)^m(a,25)}function w(a){return m(a,7)^m(a,18)^n(a,3)}function x(a){return m(a,17)^m(a,19)^n(a,10)}function y(a,b,c){return a&b^~a&c}function z(a,b,c){return a&b^a&c^b&c}function A(a){for(var b=[],c=0;c<a.length;c+=4)b.push(a.charCodeAt(c)<<24|a.charCodeAt(c+1)<<16|a.charCodeAt(c+2)<<8|a.charCodeAt(c+3));return b}function B(a){for(var b="",c=0;c<a.length;c++)b+=(a[c]>>24&255).toString(16).padStart(2,"0")+(a[c]>>16&255).toString(16).padStart(2,"0")+(a[c]>>8&255).toString(16).padStart(2,"0")+(a[c]&255).toString(16).padStart(2,"0");return b}function sha256(a){for(var b=[1779033703,3144134277,1013904242,2773480762,1359893119,2600822924,528734635,1541459225],c=[],d=[],e=0;e<64;e++)d[e]=4294967296*Math.abs(Math.sin(e+1))|0;for(var f=A(a+String.fromCharCode(128)),h=f.length+2;h%16!=0;)f.push(0);f[f.length-2]=a.length>>>29;f[f.length-1]=a.length<<3&4294967295;for(e=0;e<f.length;e+=16){for(var k=b.slice(0),g=0;64>g;g++){c[g]=g<16?f[e+g]:x(c[g-2])+c[g-7]+w(c[g-15])+c[g-16]|0;var C=k[7]+v(k[4])+y(k[4],k[5],k[6])+d[g]+c[g]|0,D=u(k[0])+z(k[0],k[1],k[2]);k=[C+D|0,k[0],k[1],k[2],k[3]+C|0,k[4],k[5],k[6]]}for(g=0;8>g;g++)b[g]=b[g]+k[g]|0}return B(b)}g.sha256=sha256})(typeof window!="undefined"?window:this);
+  }
   sha256 = (window as any).sha256
 }
 
@@ -77,7 +81,7 @@ function loadThumbmarkJS(thumbmarkKey?: string): Promise<any> {
   return new Promise((resolve, reject) => {
     if (window.ThumbmarkJS) return resolve(window.ThumbmarkJS)
     const script = document.createElement('script')
-    script.src = thumbmarkKey || 'https://cdn.jsdelivr.net/npm/thumbmarkjs@latest/dist/thumbmark.min.js'
+    script.src = thumbmarkKey || 'https://cdn.jsdelivr.net/npm/@thumbmarkjs/thumbmarkjs/dist/thumbmark.umd.js'
     script.onload = () => resolve(window.ThumbmarkJS)
     script.onerror = reject
     document.head.appendChild(script)

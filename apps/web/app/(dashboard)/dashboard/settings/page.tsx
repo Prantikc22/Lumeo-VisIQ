@@ -54,15 +54,74 @@ function tabBtn(active: boolean) {
 
 function GeneralTab() {
   const [user, setUser] = useState<any>(null);
+  const [sites, setSites] = useState<any[]>([]);
+  const [site, setSite] = useState<any>(null);
   const [webhook, setWebhook] = useState<string>("");
+  const [autoBlock, setAutoBlock] = useState(false);
+  const [threshold, setThreshold] = useState(2);
+  const [saving, setSaving] = useState(false);
+
+  // Fetch all sites on mount
   useEffect(() => {
     browserSupabase.auth.getUser().then(res => setUser(res.data.user));
     fetch("/api/sites").then(r => r.json()).then(data => {
-      if (data.sites && data.sites[0]?.webhook_url) setWebhook(data.sites[0].webhook_url);
+      if (data.sites && data.sites.length > 0) {
+        setSites(data.sites);
+        setSite(data.sites[0]);
+        setWebhook(data.sites[0]?.webhook_url || "");
+        setAutoBlock(!!data.sites[0].auto_block_trial_abuse);
+        setThreshold(Number(data.sites[0].trial_abuse_threshold) || 2);
+      }
     });
   }, []);
+
+  // When site changes, update settings fields
+  useEffect(() => {
+    if (!site) return;
+    setWebhook(site.webhook_url || "");
+    setAutoBlock(!!site.auto_block_trial_abuse);
+    setThreshold(Number(site.trial_abuse_threshold) || 2);
+  }, [site]);
+
+  const handleSiteChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const selected = sites.find(s => s.id === e.target.value);
+    if (selected) setSite(selected);
+  };
+
+  const handleSave = async () => {
+    if (!site) return;
+    setSaving(true);
+    await fetch(`/api/sites/${site.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ auto_block_trial_abuse: autoBlock, trial_abuse_threshold: threshold })
+    });
+    // Refresh site list to get updated values
+    const res = await fetch("/api/sites");
+    const data = await res.json();
+    setSites(data.sites);
+    const updated = data.sites.find((s: any) => s.id === site.id);
+    if (updated) setSite(updated);
+    setSaving(false);
+  };
+
   return (
     <div className="space-y-4">
+      <div className="bg-white p-4 rounded shadow">
+        <div className="font-semibold mb-2">Select Site</div>
+        <select
+          className="border px-2 py-1 rounded w-full mb-4"
+          value={site?.id || ''}
+          onChange={handleSiteChange}
+          disabled={sites.length < 2}
+        >
+          {sites.map((s) => (
+            <option key={s.id} value={s.id}>
+              {s.name} ({s.api_key?.slice(0, 8)}...)
+            </option>
+          ))}
+        </select>
+      </div>
       <div className="bg-white p-4 rounded shadow">
         <div className="font-semibold mb-2">Account Info</div>
         <div>Email: <span className="font-mono">{user?.email || "-"}</span></div>
@@ -71,6 +130,31 @@ function GeneralTab() {
       <div className="bg-white p-4 rounded shadow">
         <div className="font-semibold mb-2">API Settings</div>
         <div>Webhook URL: <span className="font-mono">{webhook || "-"}</span></div>
+      </div>
+      <div className="bg-white p-4 rounded shadow">
+        <div className="font-semibold mb-2">Trial Abuse Protection</div>
+        <div className="flex items-center gap-4 mb-2">
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={autoBlock} onChange={e => setAutoBlock(e.target.checked)} />
+            Enable auto-block for trial abuse
+          </label>
+        </div>
+        <div className="flex items-center gap-2 mb-2">
+          <label>Threshold (unique emails per device):</label>
+          <input
+            type="number"
+            min={2}
+            className="border px-2 py-1 rounded w-16"
+            value={threshold}
+            onChange={e => setThreshold(Number(e.target.value))}
+            disabled={!autoBlock}
+          />
+        </div>
+        <button
+          className="bg-blue-600 text-white px-4 py-2 rounded mt-2"
+          onClick={handleSave}
+          disabled={saving}
+        >{saving ? 'Saving...' : 'Save Settings'}</button>
       </div>
     </div>
   );
@@ -106,14 +190,31 @@ function BillingTab({ billing, loading }: { billing: any, loading: boolean }) {
         )}
       </div>
 
-      <a
-        href="https://logicwerk-test.chargebeeportal.com"
-        target="_blank"
-        rel="noopener noreferrer"
+      <button
         className="bg-blue-600 text-white px-4 py-2 rounded inline-block"
+        disabled={loading}
+        onClick={async () => {
+          try {
+            const { data: { session } } = await browserSupabase.auth.getSession();
+            if (!session) throw new Error('Not logged in');
+            const res = await fetch('/api/chargebee/portal', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: session.user.email })
+            });
+            const json = await res.json();
+            if (json.url) {
+              window.open(json.url, '_blank');
+            } else {
+              alert(json.error || 'Failed to open portal');
+            }
+          } catch (e: any) {
+            alert(e.message || 'Failed to open portal');
+          }
+        }}
       >
-        Manage account
-      </a>
+        {loading ? 'Opening...' : 'Manage account'}
+      </button>
 
       <div className="bg-white p-4 rounded shadow">
         <div className="font-semibold mb-2">Billing History</div>

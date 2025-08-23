@@ -1,11 +1,45 @@
 {
-  "name": "@visitoriq/sdk",
-  "version": "1.0.0",
-  "main": "dist/index.js",
+  "name": "@logicwerk/visitoriq-sdk",
+  "version": "1.3.0",
+  "description": "VisitorIQ embeddable browser SDK for fraud detection and visitor intelligence.",
+  "main": "dist/index.min.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/index.min.js",
+    "dist/index.d.ts",
+    "dist/loader.min.js",
+    "dist/loader.min.js.map"
+  ],
+  "unpkg": "dist/loader.min.js",
+  "jsdelivr": "dist/loader.min.js",
+  "keywords": [
+    "fraud",
+    "visitor",
+    "fingerprint",
+    "embeddable",
+    "sdk",
+    "logicwerk",
+    "security"
+  ],
+  "author": "Logicwerk <info@logicwerk.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/logicwerk/visitoriq.git"
+  },
+  "homepage": "https://visitoriq.logicwerk.com/",
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "tsup src/index.ts --format iife --global-name visitoriq --minify --out-dir dist --target es2020"
+    "build": "tsup src/index.ts --format iife --global-name visitoriq --minify --out-dir dist --target es2020 && tsup src/loader.ts --format iife --minify --out-dir dist --target es2020 --sourcemap"
   },
   "devDependencies": {
+    "@rollup/plugin-commonjs": "^28.0.6",
+    "@rollup/plugin-node-resolve": "^16.0.1",
+    "@rollup/plugin-typescript": "^12.1.4",
+    "rollup": "^2.79.2",
+    "rollup-plugin-terser": "^7.0.2",
     "tsup": "^8.5.0",
     "typescript": "^5.9.2"
   }

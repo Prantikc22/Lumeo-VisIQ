@@ -26,7 +26,7 @@ export default function SitesPage() {
   }
 
   function handleShowSnippet(siteKey: string, siteName: string) {
-    const snippet = `<script src="https://cdn.visitoriq.com/v1.js" data-site-key="${siteKey}"></script>`;
+    const snippet = `<script async src=\"https://cdn.jsdelivr.net/npm/@logicwerk/visitoriq-sdk@1.3.0/dist/loader.min.js\" data-sitekey=\"${siteKey}\"></script>`;
     setModal({ type: 'snippet', snippet, message: `Embed this on your website for ${siteName}` });
   }
 
@@ -131,8 +131,11 @@ export default function SitesPage() {
               <div className="font-semibold mb-2">{modal.message}</div>
               <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto mb-2">{modal.snippet}</pre>
               <button className="bg-blue-600 text-white px-3 py-1 rounded text-xs" onClick={() => {navigator.clipboard.writeText(modal.snippet!); setModal({ type: 'success', message: 'Snippet copied!' });}}>Copy Snippet</button>
+              <div className="text-xs text-gray-500 mt-3">
+                <b>Note:</b> By default, <code>data-api-base</code> points to <code>https://api.visitoriq.com</code>. For development, you may use your local or staging API URL.
+              </div>
             </div>
-          )}
+          )} 
           {modal.type === 'confirmDelete' && (
             <div>
               <div className="mb-4">Are you sure you want to delete <span className="font-semibold">{modal.site?.name}</span>?</div>
@@ -184,7 +187,9 @@ export default function SitesPage() {
                   if (!res.ok) throw new Error("Failed to create site");
                   fetchSites();
                   const data = await res.json();
-                  setModal({ type: 'success', message: `Site created! Site key: ${data.site.api_key}` });
+                  // Show snippet modal directly after creation
+                  const snippet = `<script async src=\"https://cdn.jsdelivr.net/npm/@logicwerk/visitoriq-sdk@1.3.0/dist/loader.min.js\" data-sitekey=\"${data.site.api_key}\"></script>`;
+                  setModal({ type: 'snippet', snippet, message: `Embed this on your website for ${data.site.name}` });
                 } catch (err: any) {
                   setModal({ type: 'error', message: err.message || 'Failed to create site' });
                 } finally {

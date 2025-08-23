@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>VisitorIQ Local Test</title>
+  </head>
+  <body>
+    <h1>VisitorIQ Local Test</h1>
+    <div id="status"></div>
+
+    <!-- 3 scripts: sha256 (optional if your index.min.js already inlines it), Thumbmark, your SDK -->
+    <script src="sha256.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@thumbmarkjs/thumbmarkjs/dist/thumbmark.umd.js" async crossorigin="anonymous"></script>
+    <script src="index.min.js" async crossorigin="anonymous"></script>
+
+    <!-- BotD as a classic script (avoids dynamic import headaches) -->
+    <script src="https://openfpcdn.io/botd/v1" async crossorigin="anonymous"></script>
+
+    <script>
+      (function () {
+        const SITE_KEY = "f70faa7a447bb94d4df5528628843e084ef078180fefa219a0566d3cae77c7ec";
+        const API_BASE = "http://localhost:3000";
+
+        function getThumbmark() {
+          try { return new window.ThumbmarkJS.Thumbmark().get(); }
+          catch (e) { return Promise.resolve({ thumbmark: "" }); }
+        }
+
+        function checkBlocked(fp) {
+          const url = `${API_BASE}/api/blocks?siteKey=${encodeURIComponent(SITE_KEY)}&fp=${encodeURIComponent(fp || "")}`;
+          return fetch(url, {
+            method: "GET",
+            mode: "cors",
+            headers: { "x-usage-track": "true" },
+          })
+          .then(r => r.ok ? r.json() : null)
+          .then(data => {
+            if (!data) return false;
+            if (typeof data.blocked === "boolean") return data.blocked;
+            if (Array.isArray(data.blocks)) return data.blocks.some(b => b && b.value === fp);
+            return false;
+          })
+          .catch(() => false);
+        }
+
+        function detectBotd() {
+          if (!window.Botd) return Promise.resolve(null);
+          try { return window.Botd.load().then(b => b.detect()); }
+          catch { return Promise.resolve(null); }
+        }
+
+        // Run on DOM ready
+        function start() {
+          Promise.all([getThumbmark(), detectBotd()]).then(([tm, botd]) => {
+            const fp = (tm && tm.thumbmark) || "";
+
+            checkBlocked(fp).then((isBlocked) => {
+              if (isBlocked) {
+                const o = document.createElement("div");
+                o.style.cssText = "position:fixed;inset:0;background:#000c;color:#fff;display:flex;align-items:center;justify-content:center;z-index:99999;";
+                o.textContent = "Access denied: Your device is blocked.";
+                document.body.appendChild(o);
+              }
+
+              // Your SDK call (index.min.js exposes window.visitoriq.init)
+              if (window.visitoriq && typeof window.visitoriq.init === "function") {
+                window.visitoriq.init({
+                  siteKey: SITE_KEY,
+                  endpoint: `${API_BASE}/api/collect-visitor`,
+                  botd_result: botd,
+                  onResult: (resp) => {
+                    document.getElementById("status").textContent = "Collected: " + JSON.stringify(resp || {}, null, 2);
+                  },
+                });
+              } else {
+                document.getElementById("status").textContent = "visitoriq.init not available";
+              }
+            });
+          });
+        }
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", start);
+        } else {
+          start();
+        }
+      })();
+    </script>
+  </body>
+</html>

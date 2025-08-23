@@ -11,6 +11,8 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
   if ('auto_block' in body) update.auto_block = body.auto_block
   if ('risk_threshold' in body) update.risk_threshold = body.risk_threshold
   if ('repeat_signup_limit' in body) update.repeat_signup_limit = body.repeat_signup_limit
+  if ('auto_block_trial_abuse' in body) update.auto_block_trial_abuse = body.auto_block_trial_abuse
+  if ('trial_abuse_threshold' in body) update.trial_abuse_threshold = body.trial_abuse_threshold
   const { data, error } = await supabaseServer.from('sites').update(update).eq('id', id).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ site: data })

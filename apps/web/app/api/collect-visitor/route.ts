@@ -1,4 +1,6 @@
 console.log('[CASCADE DEBUG] collect-visitor route.ts loaded');
+console.log('SUPABASE_URL', process.env.SUPABASE_URL);
+console.log('SUPABASE_SERVICE_ROLE_KEY', process.env.SUPABASE_SERVICE_ROLE_KEY);
 import { NextResponse } from 'next/server'
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -65,23 +67,11 @@ const CollectVisitorSchema = z.object({
   botd_result: z.any().optional(),
 })
 
-function withCORS(res: Response) {
-  res.headers.set('Access-Control-Allow-Origin', 'http://localhost:8080');
-  res.headers.set('Vary', 'Origin');
-  return res;
-}
+import { withCORS } from '../withCORS';
 
-export async function OPTIONS(request: Request) {
-  return new Response(null, {
-    status: 204,
-    headers: {
-      "Access-Control-Allow-Origin": "http://localhost:8080",
-      "Access-Control-Allow-Methods": "POST,OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
-      "Access-Control-Max-Age": "86400"
-    }
-  });
-}
+export const OPTIONS = withCORS(async function OPTIONS() {
+  return new NextResponse(null, { status: 204 });
+});
 
 function normalizeBotdResult(botd: any) {
   if (!botd) return undefined;
@@ -92,12 +82,12 @@ function normalizeBotdResult(botd: any) {
   return botd;
 }
 
-export async function POST(req: Request) {
+export const POST = withCORS(async function POST(req: Request) {
   try {
     const body = await req.json()
     const parse = CollectVisitorSchema.safeParse(body)
     if (!parse.success) {
-      return withCORS(NextResponse.json({ error: 'Invalid body', details: parse.error.errors }, { status: 400 }))
+      return NextResponse.json({ error: 'Invalid body', details: parse.error.errors }, { status: 400 })
     }
     const {
       siteKey, fingerprint_hash, userAgent, language, timezone, resolution, referrer = '', incognito = false, webdriver = false, thumbmark_signals, email, phone, name, botd_result
@@ -105,7 +95,7 @@ export async function POST(req: Request) {
 
     // IP detection
     const ip = (headers().get('x-forwarded-for')?.split(',')[0] ?? (req as any).ip ?? (req as any).socket?.remoteAddress ?? '').trim()
-    if (!ip) return withCORS(NextResponse.json({ error: 'IP not found' }, { status: 400 }))
+    if (!ip) return NextResponse.json({ error: 'IP not found' }, { status: 400 })
 
     // OSS Tor/Proxy/Disposable Email checks
     // OSS Tor/Proxy/Disposable Email checks (async, robust)
@@ -129,7 +119,7 @@ export async function POST(req: Request) {
 
     // Rate limit
     const rl = await tokenBucket(`rl:${ip}`, 60, 1)
-    if (!rl.allowed) return withCORS(NextResponse.json({ error: 'rate_limited' }, { status: 429 }))
+    if (!rl.allowed) return NextResponse.json({ error: 'rate_limited' }, { status: 429 })
 
     // IPInfo
     const info = await getIPInfo(ip)
@@ -175,6 +165,8 @@ export async function POST(req: Request) {
     let manualBlock = false
     let blockId: string | null = null
     let blockReason: string | null = null
+    let suspiciousReason: string | null = null;
+    let suspicious: boolean = false;
     const { data: blocks } = await supabaseServer
       .from('manual_blocks')
       .select('id,reason')
@@ -195,11 +187,17 @@ export async function POST(req: Request) {
       finalVerdict = 'high'
     }
 
-    // Lookup site_id, repeat_signup_limit, and user_id from sites table using api_key
-    const { data: siteRow, error: siteError } = await supabaseServer.from('sites').select('id, repeat_signup_limit, user_id').eq('api_key', siteKey).maybeSingle();
+    // Lookup site_id, repeat_signup_limit, user_id, and trial abuse settings from sites table using api_key
+    const { data: siteRow, error: siteError } = await supabaseServer.from('sites').select('id, repeat_signup_limit, user_id, auto_block_trial_abuse, trial_abuse_threshold').eq('api_key', siteKey).maybeSingle();
+    console.log('[DEBUG siteKey]', siteKey);
+    console.log('[DEBUG siteRow FULL]', JSON.stringify(siteRow));
+    console.log('[DEBUG siteRow.auto_block_trial_abuse]', siteRow ? siteRow.auto_block_trial_abuse : undefined);
+    console.log('[DEBUG siteError]', siteError);
     if (!siteRow || siteError) {
-      return withCORS(NextResponse.json({ error: 'invalid_site_key', details: 'Site not found for provided siteKey' }, { status: 400 }));
+      return NextResponse.json({ error: 'invalid_site_key', details: 'Site not found for provided siteKey' }, { status: 400 });
     }
+    const autoBlockTrialAbuse = siteRow.auto_block_trial_abuse ?? false;
+    const trialAbuseThreshold = siteRow.trial_abuse_threshold ?? 2; // Default threshold = 2
 
     // Check API usage quota BEFORE running IPInfo or event insert
     let quotaExceeded = false;
@@ -223,14 +221,14 @@ export async function POST(req: Request) {
       }
     }
     if (quotaExceeded) {
-      return withCORS(NextResponse.json({ error: 'quota_exceeded', details: 'API quota reached for this account.' }, { status: 429 }));
+      return NextResponse.json({ error: 'quota_exceeded', details: 'API quota reached for this account.' }, { status: 429 });
     }
 
     // Upsert visitor before inserting event to satisfy FK constraint
-    await supabaseServer.from('visitors').upsert({
-      id: visitor_id,
+    const { data: upsertedVisitor, error: upsertVisitorErr } = await supabaseServer.from('visitors').upsert({
+      id: visitor_id, // must be UUID
       site_id: siteRow.id,
-      visitor_id: visitor_id.toString(),
+      visitor_id: visitor_id, // keep as UUID
       fingerprint: fingerprint_hash,
       thumbmark: thumbmark_signals?.hash || '',
       user_agent: userAgent,
@@ -247,20 +245,106 @@ export async function POST(req: Request) {
       email: email || null,
       phone: phone || null,
       name: name || null,
-      botd_result: botd_result || null,
       risk_score: 0,
       is_tor: isTor,
       is_proxy: isProxy,
       is_temp_email: isTempEmail
     }, { onConflict: 'id' });
-    // Insert event
-    // Insert event using only schema fields and available data
-    const { data: inserted, error: insertErr } = await supabaseServer.from('events').insert({
+    console.log('[DEBUG upsertedVisitor]', upsertedVisitor);
+    console.log('[DEBUG upsertVisitorErr]', upsertVisitorErr);
+    if (upsertVisitorErr) {
+      return NextResponse.json({ error: 'db_upsert_visitor_failed', details: upsertVisitorErr.message }, { status: 500 });
+    }
+    // [TRIAL ABUSE BLOCK LOGIC] Count unique emails for this fingerprint/site BEFORE event insert
+    if (email && fingerprint_hash) {
+      // Insert new email into visitor_emails if not already present
+      const { data: existingEmail, error: emailLookupErr } = await supabaseServer
+        .from('visitor_emails')
+        .select('id')
+        .eq('site_id', siteRow.id)
+        .eq('fingerprint', fingerprint_hash)
+        .eq('email', email.toLowerCase())
+        .maybeSingle();
+      if (!emailLookupErr && !existingEmail) {
+        await supabaseServer.from('visitor_emails').insert({
+          site_id: siteRow.id,
+          fingerprint: fingerprint_hash,
+          email: email.toLowerCase(),
+          created_at: new Date().toISOString()
+        });
+      }
+      // Count unique emails from visitor_emails
+      const { data: emailRows, error: emailErr } = await supabaseServer
+        .from('visitor_emails')
+        .select('email')
+        .eq('site_id', siteRow.id)
+        .eq('fingerprint', fingerprint_hash);
+      console.log('[DEBUG trial abuse visitor_emails] emailRows:', emailRows);
+      if (!emailErr && emailRows) {
+        const uniqueEmails = Array.from(new Set(emailRows.map((r: any) => (r.email || '').toLowerCase()).filter(Boolean)));
+        console.log('[DEBUG trial abuse visitor_emails] uniqueEmails:', uniqueEmails, 'length:', uniqueEmails.length, 'threshold:', trialAbuseThreshold, 'autoBlockTrialAbuse:', autoBlockTrialAbuse);
+        // If threshold reached or exceeded
+        if (uniqueEmails.length >= trialAbuseThreshold) {
+          if (autoBlockTrialAbuse) {
+            // Check if already blocked for trial abuse
+            const { data: existingBlock, error: blockErr } = await supabaseServer
+              .from('manual_blocks')
+              .select('id')
+              .eq('site_key', siteKey)
+              .eq('fingerprint_hash', fingerprint_hash)
+              .eq('reason', 'trial abuse: multiple emails')
+              .maybeSingle();
+            console.log('[DEBUG trial abuse visitor_emails] blockErr:', blockErr, 'existingBlock:', existingBlock);
+            if (!blockErr && !existingBlock) {
+              const { error: insertBlockErr, data: insertBlockData } = await supabaseServer.from('manual_blocks').insert({
+                fingerprint_hash,
+                reason: 'trial abuse: multiple emails',
+                site_key: siteKey
+              });
+              console.log('[DEBUG trial abuse visitor_emails] block insert error:', insertBlockErr, 'block insert data:', insertBlockData);
+              manualBlock = true;
+              blockReason = 'trial abuse: multiple emails';
+              action = 'auto_block';
+              finalScore = 100;
+              finalVerdict = 'high';
+            }
+          } else if (!manualBlock) {
+            suspicious = true;
+            suspiciousReason = `Multiple emails (${uniqueEmails.length}) for same fingerprint`;
+          }
+        }
+      } else {
+        console.log('[DEBUG trial abuse visitor_emails] emailErr:', emailErr);
+      }
+    }
+    // --- Event insert logic START ---
+    // Fetch and increment visit_count
+    let newVisitCount = 1;
+    const { data: visitorRow, error: visitorFetchErr } = await supabaseServer
+      .from('visitors')
+      .select('visit_count')
+      .eq('id', visitor_id)
+      .maybeSingle();
+    if (!visitorFetchErr && visitorRow && typeof visitorRow.visit_count === 'number') {
+      newVisitCount = visitorRow.visit_count + 1;
+      await supabaseServer
+        .from('visitors')
+        .update({ visit_count: newVisitCount, last_seen: new Date().toISOString() })
+        .eq('id', visitor_id);
+    } else {
+      // fallback: set to 1 if not found or error
+      await supabaseServer
+        .from('visitors')
+        .update({ visit_count: 1, last_seen: new Date().toISOString() })
+        .eq('id', visitor_id);
+    }
+    // Insert event and get ID
+    const { data: insertedEvent, error: insertErr } = await supabaseServer.from('events').insert({
       site_id: siteRow.id,
       visitor_id,
       event_type: 'page_view',
       event_name: 'page_view',
-      url: '', // Not available from SDK, set blank
+      url: '',
       referrer,
       properties: {
         fingerprint_hash,
@@ -278,30 +362,88 @@ export async function POST(req: Request) {
         is_proxy: isProxy,
         is_temp_email: !!isTempEmail,
         vpnDetected,
-        is_bot: false, // update with real detection if available
-        // Ensure these are always present for frontend display
+        is_bot: false,
         browser: body.browser || '',
         os: body.os || '',
         resolution: body.resolution || '',
         timezone: body.timezone || '',
         userAgent: body.userAgent || '',
         signals: Array.isArray(body.signals) ? body.signals : (body.thumbmark_signals?.signals || []),
-        // Advanced detection fields
         gps_location: body.geo && body.geo.lat && body.geo.lon ? { lat: body.geo.lat, lon: body.geo.lon, accuracy: body.geo.accuracy } : undefined,
         gps_permission: body.geo?.permission,
         emulator_detected: !!body.emulator?.isEmulator,
         emulator_reasons: body.emulator?.reasons || [],
         geo_mismatch: (body.geo && body.geo.lat && body.geo.lon && info && info.loc) ? (Math.abs(body.geo.lat - info.loc[0]) > 0.5 || Math.abs(body.geo.lon - info.loc[1]) > 0.5) : false,
-        location_spoofed: (body.geo && body.geo.lat && body.geo.lon && info && info.loc) ? (Math.abs(body.geo.lat - info.loc[0]) > 1.5 || Math.abs(body.geo.lon - info.loc[1]) > 1.5) : false
+        location_spoofed: (body.geo && body.geo.lat && body.geo.lon && info && info.loc) ? (Math.abs(body.geo.lat - info.loc[0]) > 1.5 || Math.abs(body.geo.lon - info.loc[1]) > 1.5) : false,
+        suspicious,
+        suspiciousReason,
+        visit_count: newVisitCount
       },
       timestamp: new Date().toISOString()
-    }).select('id').single()
+    }).select('id').single();
     if (insertErr) {
-      console.error('[COLLECT-VISITOR][ERROR] Failed to insert event:', insertErr, { site_id: siteRow.id, visitor_id });
-      return withCORS(NextResponse.json({ error: 'db_insert_failed', details: insertErr.message }, { status: 500 }))
+      return NextResponse.json({ error: 'db_insert_failed', details: insertErr.message }, { status: 500 });
     }
-    console.log('[COLLECT-VISITOR] Event inserted successfully:', { event_id: inserted?.id, site_id: siteRow.id, visitor_id });
+    // --- Event insert logic END ---
 
+      const { data: usageRows, error: usageFetchErr } = await supabaseServer
+        .from('user_api_usage')
+        .select('used, quota, cycle_end')
+        .eq('user_id', siteRow.user_id)
+        .limit(1);
+      if (usageFetchErr) {
+        console.error('[COLLECT-VISITOR][USAGE] Failed to fetch usage row:', usageFetchErr, { user_id: siteRow.user_id });
+      }
+      if (usageRows && usageRows.length > 0) {
+        const { used, quota, cycle_end } = usageRows[0];
+        const now = new Date();
+        if (!cycle_end || new Date(cycle_end) < now) {
+          quotaExceeded = true;
+        } else if (quota > 0 && used >= quota) {
+          quotaExceeded = true;
+        }
+      }
+
+    // Count unique emails for this fingerprint/site
+    if (email && fingerprint_hash) {
+      const { data: emailRows, error: emailErr } = await supabaseServer
+        .from('visitors')
+        .select('email')
+        .eq('site_id', siteRow.id)
+        .eq('fingerprint', fingerprint_hash)
+        .neq('email', null);
+      if (!emailErr && emailRows) {
+        const uniqueEmails = Array.from(new Set(emailRows.map((r: any) => (r.email || '').toLowerCase()).filter(Boolean)));
+        // If threshold reached or exceeded
+        if (uniqueEmails.length >= trialAbuseThreshold) {
+          if (autoBlockTrialAbuse) {
+            // Check if already blocked for trial abuse
+            const { data: existingBlock, error: blockErr } = await supabaseServer
+              .from('manual_blocks')
+              .select('id')
+              .eq('site_key', siteKey)
+              .eq('fingerprint_hash', fingerprint_hash)
+              .eq('reason', 'trial abuse: multiple emails')
+              .maybeSingle();
+            if (!blockErr && !existingBlock) {
+              await supabaseServer.from('manual_blocks').insert({
+                fingerprint_hash,
+                reason: 'trial abuse: multiple emails',
+                site_key: siteKey
+              });
+              manualBlock = true;
+              blockReason = 'trial abuse: multiple emails';
+              action = 'auto_block';
+              finalScore = 100;
+              finalVerdict = 'high';
+            }
+          } else if (!manualBlock) {
+            suspicious = true;
+            suspiciousReason = `Multiple emails (${uniqueEmails.length}) for same fingerprint`;
+          }
+        }
+      }
+    }
     // Increment API usage for this user
     try {
       if (siteRow.user_id) {
@@ -367,7 +509,7 @@ export async function POST(req: Request) {
       risk_score: finalScore,
       verdict: finalVerdict,
       action,
-      visitor_event_id: inserted.id,
+      visitor_event_id: insertedEvent.id,
       signals: {
         vpnDetected,
         timezoneMismatch,
@@ -375,6 +517,6 @@ export async function POST(req: Request) {
       }
     }))
   } catch (err: any) {
-    return withCORS(NextResponse.json({ error: 'server_error', details: err.message }, { status: 500 }))
+    return NextResponse.json({ error: 'server_error', details: err.message }, { status: 500 })
   }
-}
+});

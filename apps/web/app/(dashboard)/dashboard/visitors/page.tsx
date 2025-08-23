@@ -14,6 +14,12 @@ interface VisitorEvent {
   verdict: string
   signals: string[]
   site_id: string
+  properties?: {
+    visit_count?: number;
+    suspicious?: boolean;
+    suspiciousReason?: string;
+    [key: string]: any;
+  }
 }
 
 const VERDICT_COLORS = {
@@ -335,6 +341,8 @@ export default function VisitorsPage() {
                       <th className="px-4 py-2 text-left">Location</th>
                       <th className="px-4 py-2 text-left">Org</th>
                       <th className="px-4 py-2 text-left">Fingerprint</th>
+                      <th className="px-4 py-2 text-left">Visits</th>
+                      <th className="px-4 py-2 text-left">Suspicious</th>
                       <th className="px-4 py-2 text-left">Risk</th>
                       <th className="px-4 py-2 text-left">Verdict</th>
                       <th className="px-4 py-2 text-left">Signals</th>
@@ -349,6 +357,14 @@ export default function VisitorsPage() {
                         <td className="px-4 py-2 text-xs">{(event.ip_city || event.ip_country) ? `${event.ip_city || ''}${event.ip_city && event.ip_country ? ', ' : ''}${event.ip_country || ''}` : '—'}</td>
                         <td className="px-4 py-2 text-xs">{event.ip_org || '—'}</td>
                         <td className="px-4 py-2 font-mono text-xs" title={event.fingerprint_hash}>{event.fingerprint_hash.slice(0,8)}...</td>
+                        <td className="px-4 py-2 text-xs">{event.properties?.visit_count ?? '—'}</td>
+                        <td className="px-4 py-2 text-xs">
+                          {event.properties?.suspicious ? (
+                            <span className="inline-block bg-yellow-100 text-yellow-800 rounded px-2 py-1 text-xs font-semibold" title={event.properties?.suspiciousReason || ''}>
+                              Suspicious{event.properties?.suspiciousReason ? `: ${event.properties.suspiciousReason}` : ''}
+                            </span>
+                          ) : '—'}
+                        </td>
                         <td className="px-4 py-2">
                           <span className={riskColor(event.risk_score) + " px-2 py-1 rounded text-xs font-bold"}>{event.risk_score}</span>
                         </td>
