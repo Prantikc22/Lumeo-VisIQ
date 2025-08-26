@@ -54,7 +54,7 @@ export default function RegisterPage() {
           headers: { "Content-Type": "application/json" },
         });
       }
-      const next = searchParams?.get("next") || "/dashboard";
+      const next = "/pricing";
       setTimeout(() => router.push(next), 1200);
     }
   }
@@ -82,7 +82,7 @@ export default function RegisterPage() {
       <div className="w-full max-w-md">
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-center">Sign up for VisitorIQ</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center">Sign up for Lumeo VisIQ</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">

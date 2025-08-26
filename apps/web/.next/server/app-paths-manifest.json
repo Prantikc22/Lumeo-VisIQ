@@ -1,8 +1,7 @@
 {
-  "/api/sites/route": "app/api/sites/route.js",
-  "/(dashboard)/dashboard/visitors/page": "app/(dashboard)/dashboard/visitors/page.js",
-  "/(dashboard)/dashboard/settings/page": "app/(dashboard)/dashboard/settings/page.js",
-  "/(dashboard)/dashboard/sites/page": "app/(dashboard)/dashboard/sites/page.js",
-  "/(dashboard)/dashboard/blocks/page": "app/(dashboard)/dashboard/blocks/page.js",
-  "/(dashboard)/dashboard/page": "app/(dashboard)/dashboard/page.js"
+  "/pricing/page": "app/pricing/page.js",
+  "/landing/page": "app/landing/page.js",
+  "/(dashboard)/dashboard/page": "app/(dashboard)/dashboard/page.js",
+  "/(dashboard)/login/page": "app/(dashboard)/login/page.js",
+  "/(dashboard)/dashboard/settings/page": "app/(dashboard)/dashboard/settings/page.js"
 }

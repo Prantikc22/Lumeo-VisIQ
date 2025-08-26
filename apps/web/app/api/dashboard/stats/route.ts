@@ -163,6 +163,22 @@ export async function GET() {
     eventsOverTime[hour] = (eventsOverTime[hour] || 0) + 1;
   });
 
+  // Fetch plan info from user_billing (most recent by updated_at)
+  let plan_id = null;
+  let plan_label = '—';
+  try {
+    const { data: billingRows, error: billErr } = await supabaseServer
+      .from('user_billing')
+      .select('plan_id, plan_name, updated_at')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+      .limit(1);
+    if (!billErr && billingRows && billingRows.length > 0) {
+      plan_id = billingRows[0].plan_id;
+      plan_label = billingRows[0].plan_name || billingRows[0].plan_id || '—';
+    }
+  } catch (err) { /* ignore, fallback to null/— */ }
+
   return NextResponse.json({
     eventsToday: dailyVisitors || 0, // for backward compatibility, eventsToday = dailyVisitors
     highRiskToday: highRiskToday || 0,
@@ -173,6 +189,8 @@ export async function GET() {
     topCountries,
     riskBreakdown: { low: lowRisk, medium: mediumRisk, high: highRisk },
     recentActivity: recentEvents || [],
-    eventsOverTime
+    eventsOverTime,
+    plan_id,
+    plan_label
   })
 }

@@ -59,7 +59,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-center">Sign in to VisitorIQ</CardTitle>
+            <CardTitle className="text-2xl font-bold text-center">Sign in to Lumeo VisIQ</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -83,10 +83,7 @@ export default function LoginPage() {
               {message && <p className="mt-2 text-center text-sm text-red-600">{message}</p>}
               <div className="mt-4 text-center text-sm text-gray-600">
                 Don&apos;t have an account?{' '}
-                <Link href={{
-                  pathname: "/register",
-                  query: Object.fromEntries(new URLSearchParams(typeof window !== "undefined" ? window.location.search : ""))
-                }} className="text-blue-600 hover:underline">Sign up</Link>
+                <Link href="/register?next=%2Fpricing" className="text-blue-600 hover:underline">Sign up</Link>
               </div>
             </form>
           </CardContent>

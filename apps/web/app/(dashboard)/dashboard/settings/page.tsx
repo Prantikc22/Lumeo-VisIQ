@@ -190,31 +190,58 @@ function BillingTab({ billing, loading }: { billing: any, loading: boolean }) {
         )}
       </div>
 
-      <button
-        className="bg-blue-600 text-white px-4 py-2 rounded inline-block"
-        disabled={loading}
-        onClick={async () => {
-          try {
-            const { data: { session } } = await browserSupabase.auth.getSession();
-            if (!session) throw new Error('Not logged in');
-            const res = await fetch('/api/chargebee/portal', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ email: session.user.email })
-            });
-            const json = await res.json();
-            if (json.url) {
-              window.open(json.url, '_blank');
-            } else {
-              alert(json.error || 'Failed to open portal');
+      <div className="flex gap-4 mt-2">
+        <button
+          className="bg-blue-600 text-white px-4 py-2 rounded inline-block"
+          disabled={loading}
+          onClick={async () => {
+            try {
+              const { data: { session } } = await browserSupabase.auth.getSession();
+              if (!session) throw new Error('Not logged in');
+              const res = await fetch('/api/chargebee/portal', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: session.user.email })
+              });
+              const json = await res.json();
+              if (json.url) {
+                window.open(json.url, '_blank');
+              } else {
+                alert(json.error || 'Failed to open portal');
+              }
+            } catch (e: any) {
+              alert(e.message || 'Failed to open portal');
             }
-          } catch (e: any) {
-            alert(e.message || 'Failed to open portal');
-          }
-        }}
-      >
-        {loading ? 'Opening...' : 'Manage account'}
-      </button>
+          }}
+        >
+          {loading ? 'Opening...' : 'Manage account'}
+        </button>
+        <button
+          className="bg-green-600 text-white px-4 py-2 rounded inline-block"
+          disabled={loading}
+          onClick={async () => {
+            try {
+              const { data: { session } } = await browserSupabase.auth.getSession();
+              if (!session) throw new Error('Not logged in');
+              const res = await fetch('/api/chargebee/portal', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: session.user.email })
+              });
+              const json = await res.json();
+              if (json.url) {
+                window.open(json.url, '_blank');
+              } else {
+                alert(json.error || 'Failed to open portal');
+              }
+            } catch (e: any) {
+              alert(e.message || 'Failed to open portal');
+            }
+          }}
+        >
+          {loading ? 'Opening...' : 'Upgrade Plan'}
+        </button>
+      </div>
 
       <div className="bg-white p-4 rounded shadow">
         <div className="font-semibold mb-2">Billing History</div>

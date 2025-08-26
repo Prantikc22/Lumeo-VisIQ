@@ -26,6 +26,8 @@ interface DashboardStats {
   riskBreakdown: { low: number; medium: number; high: number }
   recentActivity: any[]
   eventsOverTime: Record<string, number>
+  plan_label?: string          // <-- add this
+  plan_id?: string 
 }
 
 
@@ -62,7 +64,42 @@ export default function DashboardOverview() {
 
   return (
     <div>
-      <h1 className="text-3xl font-extrabold mb-6 tracking-tight">Dashboard</h1>
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-3xl font-extrabold tracking-tight">Dashboard</h1>
+        <div className="flex gap-2">
+          {stats && (!stats.plan_label || stats.plan_label === "—") && (
+            <a href="/pricing" className="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700 transition">Subscribe to a Plan</a>
+          )}
+          <button
+            className="bg-green-600 text-white px-4 py-2 rounded font-bold hover:bg-green-700 transition"
+            onClick={async () => {
+              try {
+                const { data: { session } } = await import("@/app/lib/supabase-browser").then(m => m.default.auth.getSession());
+                if (!session) throw new Error('Not logged in');
+                const res = await fetch('/api/chargebee/portal', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email: session.user.email })
+                });
+                const json = await res.json();
+                if (json.url) {
+                  window.open(json.url, '_blank');
+                } else {
+                  alert(json.error || 'Failed to open portal');
+                }
+              } catch (e) {
+                if (e && typeof e === "object" && "message" in e) {
+                  alert((e as { message: string }).message || "Failed to open portal");
+                } else {
+                  alert("Failed to open portal");
+                }
+              }
+            }}
+          >
+            Upgrade Plan
+          </button>
+        </div>
+      </div>
       {loading && <div>Loading...</div>}
       {error && <div className="text-red-600">{error}</div>}
       {stats && (

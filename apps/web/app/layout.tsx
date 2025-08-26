@@ -4,7 +4,10 @@ import { Inter } from 'next/font/google'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
-  title: 'VisitorIQ',
+  title: 'VisIQ: Visitor Intelligence Platform',
+  icons: {
+    icon: '/favicon1.png',
+  },
   description: 'Advanced visitor analytics and tracking',
 }
 
