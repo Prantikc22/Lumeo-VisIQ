@@ -26,7 +26,6 @@ function SidebarUser() {
   );
 }
 
-
 export default function DashboardLayout({ children }: { children: ReactNode }) {
   const router = useRouter();
 

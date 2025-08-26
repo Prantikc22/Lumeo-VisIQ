@@ -128,12 +128,14 @@ export default function SitesPage() {
           {modal.type === 'error' && (<div className="text-red-700 font-semibold mb-4">{modal.message}</div>)}
           {modal.type === 'snippet' && (
             <div>
-              <div className="font-semibold mb-2">{modal.message}</div>
+              <div className="font-semibold mb-2">How to use:</div>
+              <ol className="text-xs mb-2 pl-4 list-decimal">
+                <li>Copy the snippet below and add it to your website.</li>
+                <li>Place it inside the <code>&lt;head&gt;</code> or just before <code>&lt;/body&gt;</code> in your HTML.</li>
+                <li>For CMS (WordPress, Wix, Shopify), use the "Custom Code"/"Script" section.</li>
+              </ol>
               <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto mb-2">{modal.snippet}</pre>
               <button className="bg-blue-600 text-white px-3 py-1 rounded text-xs" onClick={() => {navigator.clipboard.writeText(modal.snippet!); setModal({ type: 'success', message: 'Snippet copied!' });}}>Copy Snippet</button>
-              <div className="text-xs text-gray-500 mt-3">
-                <b>Note:</b> By default, <code>data-api-base</code> points to <code>https://api.visitoriq.com</code>. For development, you may use your local or staging API URL.
-              </div>
             </div>
           )} 
           {modal.type === 'confirmDelete' && (
@@ -147,6 +149,29 @@ export default function SitesPage() {
           )}
           {modal.type === 'edit' && (
             <EditSiteModal site={modal.site!} />
+          )}
+          {modal.type === 'howto' && (
+            <div>
+              <div className="font-semibold text-lg mb-2">How to Add VisitorIQ to Your Website</div>
+              <div className="bg-yellow-100 text-yellow-900 p-2 rounded mb-3 text-xs border border-yellow-300">
+                <b>Important:</b> For your actual site, <b>use the <i>Embed</i> button next to your site below</b> to get your unique snippet with your Site Key. The snippet below is for reference only—you must replace <code>YOUR_SITE_KEY</code> with your actual key.
+              </div>
+              <ol className="text-sm mb-4 pl-5 list-decimal">
+                <li>Click the <b>Embed</b> button next to your site below to get your unique snippet.</li>
+                <li>Copy the snippet and add it to your website.</li>
+                <li>Paste it inside the <code>&lt;head&gt;</code> or just before the closing <code>&lt;/body&gt;</code> tag of your HTML.</li>
+                <li>If you use a CMS (like WordPress, Wix, Shopify), insert it in the "Custom Code / Script" section.</li>
+                <li>Add the snippet to all important pages for best protection and tracking.</li>
+              </ol>
+              <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto mb-2">
+{`<!-- VisitorIQ Snippet -->\n<script async\n  src="https://cdn.jsdelivr.net/npm/@logicwerk/visitoriq-sdk@1.3.0/dist/loader.min.js"\n  data-sitekey="YOUR_SITE_KEY">\n</script>\n<!-- End VisitorIQ Snippet -->`}
+              </pre>
+              <button className="bg-blue-600 text-white px-3 py-1 rounded text-xs mb-2" onClick={() => {navigator.clipboard.writeText(`<!-- VisitorIQ Snippet -->\n<script async\n  src=\"https://cdn.jsdelivr.net/npm/@logicwerk/visitoriq-sdk@1.3.0/dist/loader.min.js\"\n  data-sitekey=\"YOUR_SITE_KEY\">\n</script>\n<!-- End VisitorIQ Snippet -->`); setModal({ type: 'success', message: 'Snippet copied!' });}}>Copy Snippet</button>
+              <div className="text-xs text-gray-600 mt-2">
+                The script will automatically identify visitors, enforce block rules, and collect visitor intelligence securely.
+              </div>
+              <button className="mt-4 bg-gray-300 text-gray-800 px-4 py-1 rounded text-xs" onClick={() => setModal(null)}>Close</button>
+            </div>
           )}
           {(modal.type === 'success' || modal.type === 'error') && (
             <button className="mt-4 bg-blue-600 text-white px-3 py-1 rounded text-xs" onClick={() => setModal(null)}>Close</button>
@@ -230,14 +255,22 @@ export default function SitesPage() {
       <Modal />
       <SiteCreateModal />
       <div className="flex flex-col gap-2 mb-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2 flex-wrap">
           <h1 className="text-2xl font-bold">Sites</h1>
-          <button
-            className="bg-blue-600 text-white px-4 py-2 rounded font-semibold shadow hover:bg-blue-700"
-            onClick={() => setModal({ type: 'create' })}
-          >
-            Create New Site
-          </button>
+          <div className="flex gap-2">
+            <button
+              className="bg-blue-100 text-blue-700 px-4 py-2 rounded font-semibold shadow border border-blue-300 hover:bg-blue-200"
+              onClick={() => setModal({ type: 'howto' })}
+            >
+              How to Add VisitorIQ
+            </button>
+            <button
+              className="bg-blue-600 text-white px-4 py-2 rounded font-semibold shadow hover:bg-blue-700"
+              onClick={() => setModal({ type: 'create' })}
+            >
+              Create New Site
+            </button>
+          </div>
         </div>
         <div className="flex flex-wrap gap-2 items-center mt-2">
           <input

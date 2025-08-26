@@ -45,6 +45,21 @@
       "static/chunks/webpack.js",
       "static/chunks/main-app.js",
       "static/chunks/app/(dashboard)/dashboard/page.js"
+    ],
+    "/(dashboard)/dashboard/sites/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(dashboard)/dashboard/sites/page.js"
+    ],
+    "/(dashboard)/dashboard/visitors/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(dashboard)/dashboard/visitors/page.js"
+    ],
+    "/(dashboard)/dashboard/blocks/page": [
+      "static/chunks/webpack.js",
+      "static/chunks/main-app.js",
+      "static/chunks/app/(dashboard)/dashboard/blocks/page.js"
     ]
   }
 }

@@ -32,9 +32,9 @@ export default function PricingPage() {
   return (
     <main className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
       <h1 className="text-4xl font-bold mb-8">Choose Your Plan</h1>
-      <div className="flex flex-wrap md:flex-nowrap gap-8 justify-center w-full">
+      <div className="flex flex-wrap gap-8 justify-center">
         {plans.map(plan => (
-          <div key={plan.item_price_id} className="bg-white rounded shadow p-6 flex flex-col items-center flex-1 min-w-[220px] max-w-xs">
+          <div key={plan.item_price_id} className="bg-white rounded shadow p-6 w-72 flex flex-col items-center">
             <h2 className="text-2xl font-bold mb-2">{plan.name}</h2>
             <div className="text-xl mb-2">{plan.price}</div>
             <div className="mb-2 text-gray-500">{plan.limit}</div>

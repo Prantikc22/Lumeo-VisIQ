@@ -85,15 +85,15 @@ export default function PricingSection() {
           </p>
         </header>
 
-        {/* Responsive row of plans: single line on desktop, wrap on mobile */}
+        {/* Grid auto-fits any number of plans (your array has 5) */}
         <div className="w-full overflow-x-auto">
-          <div className="flex flex-wrap md:flex-nowrap gap-6 justify-center">
+          <div className="flex gap-6 min-w-[1100px] justify-center">
               {plans.map((plan) => {
                 const isPopular = (plan as any).popular === true; // optional flag
                 return (
                   <div
                     key={plan.name}
-                    className={`${CARD} relative flex flex-col flex-1 min-w-[220px] max-w-xs`}
+                    className={`${CARD} relative flex flex-col`}
                     style={{ borderColor: isPopular ? PRIMARY : undefined }}
               >
                 {isPopular && (
