@@ -25,7 +25,16 @@ const transitionVariants = {
   },
 };
 
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "./dialog";
+import { useState, useEffect } from "react";
+
 export function HeroSection() {
+  const [contactOpen, setContactOpen] = useState(false);
+  useEffect(() => {
+    const handler = () => setContactOpen(true);
+    window.addEventListener('open-contact-dialog', handler);
+    return () => window.removeEventListener('open-contact-dialog', handler);
+  }, []);
   return (
     <section className="relative overflow-hidden bg-background py-12 md:py-20">
       <div className="mx-auto max-w-4xl px-6 text-center">
@@ -38,13 +47,14 @@ export function HeroSection() {
         {/* Headline */}
         <AnimatedGroup variants={transitionVariants}>
           <h1 className="mx-auto mt-2 max-w-3xl text-balance text-5xl font-bold tracking-tight text-foreground md:text-6xl lg:text-7xl">
-            Stop Fraud. Approve Real Customers. <span className="text-blue-600">Instantly</span>.
+            Stop Fraud. Approve Real Customers.<br />
+            <span className="text-blue-600">Instantly</span>.
           </h1>
         </AnimatedGroup>
         {/* Subheadline */}
         <AnimatedGroup variants={transitionVariants}>
           <p className="mx-auto mt-6 max-w-2xl text-lg text-foreground">
-            Identify every visitor with industry-leading accuracy — even if they’re anonymous. Block trial abuse, account takeovers, payment fraud, and bots, without adding friction for trusted users.
+          With unmatched visitor intelligence, stop trial abuse, account takeovers, payment fraud, and bots — while giving real customers a seamless experience that builds trust and boosts conversions.
           </p>
         </AnimatedGroup>
         {/* CTAs */}
@@ -67,15 +77,39 @@ export function HeroSection() {
             </Link>
           </Button>
           <Button
-            asChild
             size="lg"
             variant="outline"
-            className="rounded-xl px-6 text-base font-semibold flex items-center gap-2 border-foreground text-foreground border">
-            <Link href="#watch-demo">
-              <PlayCircle className="size-5" /> <span>Watch Demo</span>
-            </Link>
+            className="rounded-xl px-6 text-base font-semibold flex items-center gap-2 border-foreground text-foreground border"
+            onClick={() => typeof window !== 'undefined' && window.dispatchEvent(new CustomEvent('open-contact-dialog'))}
+          >
+            <span>Contact Sales</span>
           </Button>
         </AnimatedGroup>
+        <Dialog open={contactOpen} onOpenChange={setContactOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Contact Us</DialogTitle>
+              <DialogDescription>Fill out the form below and our team will get in touch soon.</DialogDescription>
+            </DialogHeader>
+            <form className="space-y-4">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium">Name</label>
+                <input id="name" name="name" type="text" required className="mt-1 w-full rounded border px-3 py-2" />
+              </div>
+              <div>
+                <label htmlFor="email" className="block text-sm font-medium">Email</label>
+                <input id="email" name="email" type="email" required className="mt-1 w-full rounded border px-3 py-2" />
+              </div>
+              <div>
+                <label htmlFor="message" className="block text-sm font-medium">Message</label>
+                <textarea id="message" name="message" rows={4} required className="mt-1 w-full rounded border px-3 py-2" />
+              </div>
+              <DialogFooter>
+                <Button type="submit" className="w-full">Submit</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </section>
   );

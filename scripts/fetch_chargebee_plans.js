@@ -3,8 +3,8 @@
 
 const axios = require('axios');
 
-const CHARGEBEE_SITE = 'logicwerk-test';
-const CHARGEBEE_API_KEY = 'test_j27jZlPjrYUYLxGT4UcdTuQqTsM5XBYuG';
+const CHARGEBEE_SITE = 'logicwerk';
+const CHARGEBEE_API_KEY = 'live_wxSd5njglleKsn79wkS9E1wcu9acuJ6XYy';
 const PRODUCT_FAMILY_NAME = 'VisitorIQ Plans';
 
 async function getProductFamilyId() {

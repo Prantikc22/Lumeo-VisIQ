@@ -22,7 +22,28 @@ import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 
 export async function DELETE(_req: Request, { params }: { params: { id: string } }) {
-  const supabase = createServerClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, { cookies: cookies() });
+  const cookieStore = cookies();
+  let response: NextResponse | undefined = undefined;
+  const supabase = createServerClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return cookieStore.get(name)?.value;
+        },
+        set(name: string, value: string, options: any) {
+          response ||= NextResponse.next();
+          response.cookies.set({ name, value, ...options });
+        },
+        remove(name: string, options: any) {
+          response ||= NextResponse.next();
+          response.cookies.set({ name, value: '', ...options });
+        }
+      },
+      global: { fetch: (...args) => fetch(...args) },
+    }
+  );
   const {
     data: { session },
     error: sessionError,
@@ -32,11 +53,14 @@ export async function DELETE(_req: Request, { params }: { params: { id: string }
   }
   const id = params.id;
   // Check site ownership
-  const { data: site, error: siteError } = await supabaseServer.from('sites').select('user_id').eq('id', id).maybeSingle();
+  const { data: site, error: siteError } = await supabase.from('sites').select('user_id').eq('id', id).maybeSingle();
   if (!site || siteError || site.user_id !== session.user.id) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-  const { error } = await supabaseServer.from('sites').delete().eq('id', id);
+  const { error } = await supabase.from('sites').delete().eq('id', id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ success: true });
+  // Fetch updated sites for the user after deletion
+  const { data: sites, error: fetchError } = await supabase.from('sites').select('*').eq('user_id', session.user.id);
+  if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 500 });
+  return NextResponse.json({ success: true, sites });
 }

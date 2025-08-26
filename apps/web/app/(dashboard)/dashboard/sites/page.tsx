@@ -112,8 +112,9 @@ export default function SitesPage() {
     try {
       const res = await fetch(`/api/sites/${site.id}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to delete site');
+      const data = await res.json();
+      if (data.sites) setSites(data.sites);
       setModal({ type: 'success', message: 'Site deleted.' });
-      fetchSites();
     } catch (err: any) {
       setModal({ type: 'error', message: err.message || 'Delete failed' });
     }

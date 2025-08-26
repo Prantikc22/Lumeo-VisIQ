@@ -25,10 +25,10 @@ export default function SettingsPage() {
       setLoading(false);
 
       // Inject Chargebee portal script if not already present
-      if (!document.querySelector('script[data-cb-site="logicwerk-test"]')) {
+      if (!document.querySelector('script[data-cb-site="logicwerk"]')) {
         const script = document.createElement('script');
         script.src = "https://js.chargebee.com/v2/chargebee.js";
-        script.setAttribute('data-cb-site', 'logicwerk-test');
+        script.setAttribute('data-cb-site', 'logicwerk');
         script.async = true;
         document.head.appendChild(script);
       }
