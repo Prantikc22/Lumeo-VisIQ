@@ -41,17 +41,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     });
   }, [router]);
 
-  // Hide sidebar ONLY for /dashboard/login, /dashboard/register, /dashboard/forgot-password
-  const pathname = typeof window !== 'undefined' ? window.location.pathname : '';
-  const isAuthPage = ["/dashboard/login", "/dashboard/register", "/dashboard/forgot-password", "/login", "/register"].includes(pathname);
-  if (isAuthPage) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <main className="w-full max-w-md p-4">{children}</main>
-      </div>
-    );
-  }
-  // Default: sidebar layout for all other dashboard pages
+  // Always show sidebar, regardless of route
   return (
     <div className="min-h-screen flex bg-gray-50">
       <aside className="w-64 bg-white border-r hidden md:flex flex-col fixed inset-y-0 left-0 z-30">
