@@ -21,6 +21,7 @@
     "@supabase/ssr": "^0.6.1",
     "chargebee": "^2.52.0",
     "cors": "^2.8.5",
+    "dodopayments": "^1.51.2",
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "recharts": "^3.1.2"

@@ -30,6 +30,34 @@ export const GET = withCORS(async function GET(req: Request) {
       }
     }
   );
+  // Check quota/payment plan BEFORE returning blocks
+  const { data: site, error: siteError } = await supabase
+    .from('sites')
+    .select('user_id')
+    .eq('api_key', siteKey)
+    .maybeSingle();
+  if (!site || siteError) {
+    return new NextResponse(JSON.stringify({ error: 'Invalid siteKey or site not found' }), { status: 400 });
+  }
+  if (site.user_id) {
+    const { data: usageRows, error: usageFetchErr } = await supabase
+      .from('user_api_usage')
+      .select('used, quota, cycle_end')
+      .eq('user_id', site.user_id)
+      .limit(1);
+    if (usageFetchErr) {
+      console.error('[BLOCKS][USAGE][GET] Failed to fetch usage row:', usageFetchErr, { user_id: site.user_id });
+    }
+    if (usageRows && usageRows.length > 0) {
+      const { used, quota, cycle_end } = usageRows[0];
+      const now = new Date();
+      if (!cycle_end || new Date(cycle_end) < now) {
+        return new NextResponse(JSON.stringify({ error: 'quota_exceeded', details: 'API quota reached or subscription expired.' }), { status: 429 });
+      } else if (quota > 0 && used >= quota) {
+        return new NextResponse(JSON.stringify({ error: 'quota_exceeded', details: 'API quota reached for this account.' }), { status: 429 });
+      }
+    }
+  }
   // Only return blocks for the specified siteKey (tenant)
   const { data, error } = await supabase
     .from('manual_blocks')
@@ -142,6 +170,27 @@ export const POST = withCORS(async function POST(req: Request) {
   if (!site || siteError || site.user_id !== session.user.id) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
+  // Quota/cycle check BEFORE inserting into manual_blocks
+  if (site.user_id) {
+    const { data: usageRows, error: usageFetchErr } = await supabase
+      .from('user_api_usage')
+      .select('used, quota, cycle_end')
+      .eq('user_id', site.user_id)
+      .limit(1);
+    if (usageFetchErr) {
+      console.error('[BLOCKS][USAGE][POST] Failed to fetch usage row:', usageFetchErr, { user_id: site.user_id });
+    }
+    if (usageRows && usageRows.length > 0) {
+      const { used, quota, cycle_end } = usageRows[0];
+      const now = new Date();
+      if (!cycle_end || new Date(cycle_end) < now) {
+        return NextResponse.json({ error: 'quota_exceeded', details: 'API quota reached or subscription expired.' }, { status: 429 });
+      } else if (quota > 0 && used >= quota) {
+        return NextResponse.json({ error: 'quota_exceeded', details: 'API quota reached for this account.' }, { status: 429 });
+      }
+    }
+  }
+
   const insert: any = { site_key, reason, expires_at: expires_at || null };
   if (type === 'ip') insert.ip = value;
   else if (type === 'fingerprint') insert.fingerprint_hash = value;

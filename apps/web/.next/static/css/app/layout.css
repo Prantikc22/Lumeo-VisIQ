@@ -868,10 +868,6 @@ video {
 .aspect-square {
   aspect-ratio: 1 / 1;
 }
-.size-5 {
-  width: 1.25rem;
-  height: 1.25rem;
-}
 .h-1\.5 {
   height: 0.375rem;
 }
@@ -1137,9 +1133,6 @@ video {
 }
 .flex-wrap {
   flex-wrap: wrap;
-}
-.place-items-center {
-  place-items: center;
 }
 .items-start {
   align-items: flex-start;
@@ -1518,9 +1511,6 @@ video {
 }
 .p-2 {
   padding: 0.5rem;
-}
-.p-24 {
-  padding: 6rem;
 }
 .p-3 {
   padding: 0.75rem;
@@ -2889,10 +2879,6 @@ body {
 
 
 @media (min-width: 1024px) {
-
-  .lg\:flex {
-    display: flex;
-  }
 
   .lg\:text-7xl {
     font-size: 4.5rem;

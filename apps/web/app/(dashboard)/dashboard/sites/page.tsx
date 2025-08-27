@@ -138,7 +138,15 @@ export default function SitesPage() {
               <pre className="bg-gray-100 p-2 rounded text-xs overflow-x-auto mb-2">{modal.snippet}</pre>
               <button className="bg-blue-600 text-white px-3 py-1 rounded text-xs" onClick={() => {navigator.clipboard.writeText(modal.snippet!); setModal({ type: 'success', message: 'Snippet copied!' });}}>Copy Snippet</button>
             </div>
-          )} 
+          )}
+          {modal.type === 'subscribe' && (
+            <div className="flex flex-col items-center">
+              <div className="text-lg font-semibold text-blue-800 mb-2">Subscription Required</div>
+              <div className="mb-4 text-gray-700 text-center">You need an active subscription to create a new site.<br/>Please subscribe to a plan to get started.</div>
+              <a href="/pricing" className="bg-blue-600 text-white px-5 py-2 rounded font-semibold shadow hover:bg-blue-700 mb-2" target="_blank" rel="noopener noreferrer">Go to Pricing &amp; Subscribe</a>
+              <button className="mt-2 bg-gray-300 text-gray-800 px-4 py-1 rounded text-xs" onClick={() => setModal(null)}>Close</button>
+            </div>
+          )}
           {modal.type === 'confirmDelete' && (
             <div>
               <div className="mb-4">Are you sure you want to delete <span className="font-semibold">{modal.site?.name}</span>?</div>
@@ -186,6 +194,52 @@ export default function SitesPage() {
   function SiteCreateModal() {
     const [name, setName] = useState('');
     const [submitting, setSubmitting] = useState(false);
+    const [checkingSub, setCheckingSub] = useState(false);
+    // Import the helper
+    // import browserSupabase, { hasActiveSubscription } from '../../lib/supabase-browser';
+    async function handleCreate() {
+      setCheckingSub(true);
+      try {
+        // Get user session
+        const { data: { session } } = await import('../../../lib/supabase-browser').then(m => m.default.auth.getSession());
+        const userId = session?.user?.id;
+        if (!userId) {
+          setModal({ type: 'error', message: 'Not logged in. Please login again.' });
+          setCheckingSub(false);
+          return;
+        }
+        const { hasActiveSubscription } = await import('../../../lib/supabase-browser');
+        const active = await hasActiveSubscription(userId);
+        if (!active) {
+          setModal({ type: 'subscribe', message: 'You need an active subscription to create a new site.' });
+          setCheckingSub(false);
+          return;
+        }
+        setCheckingSub(false);
+        setSubmitting(true);
+        try {
+          const res = await fetch("/api/sites", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ name }),
+          });
+          if (!res.ok) throw new Error("Failed to create site");
+          fetchSites();
+          const data = await res.json();
+          // Show snippet modal directly after creation
+          const snippet = `<script async src=\"https://cdn.jsdelivr.net/npm/@logicwerk/visitoriq-sdk@1.3.0/dist/loader.min.js\" data-sitekey=\"${data.site.api_key}\"></script>`;
+          setModal({ type: 'snippet', snippet, message: `Embed this on your website for ${data.site.name}` });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Failed to create site';
+          setModal({ type: 'error', message });
+        } finally {
+          setSubmitting(false);
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Subscription check failed';
+        setModal({ type: 'error', message });
+      }
+    }
     return modal?.type === 'create' ? (
       <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
         <div className="bg-white rounded shadow-lg p-6 min-w-[320px] max-w-[90vw]">
@@ -201,31 +255,12 @@ export default function SitesPage() {
           <div className="flex gap-2">
             <button
               className="bg-blue-600 text-white px-4 py-2 rounded text-sm"
-              disabled={submitting || !name.trim()}
-              onClick={async () => {
-                setSubmitting(true);
-                try {
-                  const res = await fetch("/api/sites", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name }),
-                  });
-                  if (!res.ok) throw new Error("Failed to create site");
-                  fetchSites();
-                  const data = await res.json();
-                  // Show snippet modal directly after creation
-                  const snippet = `<script async src=\"https://cdn.jsdelivr.net/npm/@logicwerk/visitoriq-sdk@1.3.0/dist/loader.min.js\" data-sitekey=\"${data.site.api_key}\"></script>`;
-                  setModal({ type: 'snippet', snippet, message: `Embed this on your website for ${data.site.name}` });
-                } catch (err: any) {
-                  setModal({ type: 'error', message: err.message || 'Failed to create site' });
-                } finally {
-                  setSubmitting(false);
-                }
-              }}
+              disabled={submitting || checkingSub || !name.trim()}
+              onClick={handleCreate}
             >
-              {submitting ? 'Creating...' : 'Create'}
+              {checkingSub ? 'Checking...' : submitting ? 'Creating...' : 'Create'}
             </button>
-            <button className="bg-gray-300 px-4 py-2 rounded text-sm" onClick={() => setModal(null)} disabled={submitting}>Cancel</button>
+            <button className="bg-gray-300 px-4 py-2 rounded text-sm" onClick={() => setModal(null)} disabled={submitting || checkingSub}>Cancel</button>
           </div>
         </div>
       </div>

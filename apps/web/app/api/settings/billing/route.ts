@@ -9,11 +9,11 @@ const supabase = createClient(
 
 // Map item_price_id -> pretty label
 const PLAN_DISPLAY: Record<string, string> = {
-  "Free-USD-Monthly": "Free",
-  "Starter-USD-Monthly1": "Starter",
-  "Growth-USD-Monthly-USD-Monthly": "Growth",
-  "Business-USD-Monthly1": "Business",
-  "Scale-USD-Monthly": "Scale",
+  "pdt_7QTupnhTTO7P6AYzw6I3P": "Free",
+  "pdt_rHv6C3XW8TLUX2C7jiX3f": "Starter",
+  "pdt_Zebig578m3gbu9LSqTJCc": "Growth",
+  "pdt_Mrcnohw7coIDFpwgEgn7g": "Business",
+  "pdt_DILOH67XtnK6QLhUmbGYe": "Scale"
 };
 
 export async function GET(req: Request) {

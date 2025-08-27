@@ -21,6 +21,12 @@
       "static/chunks/_app-pages-browser_app_lib_supabase-browser_ts.js"
     ]
   },
+  "../app/(dashboard)/dashboard/sites/page.tsx -> ../../../lib/supabase-browser": {
+    "id": "../app/(dashboard)/dashboard/sites/page.tsx -> ../../../lib/supabase-browser",
+    "files": [
+      "static/chunks/_app-pages-browser_app_lib_supabase-browser_ts.js"
+    ]
+  },
   "../app/(dashboard)/layout.tsx -> @/app/lib/supabase-browser": {
     "id": "../app/(dashboard)/layout.tsx -> @/app/lib/supabase-browser",
     "files": []

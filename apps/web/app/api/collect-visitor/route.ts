@@ -1,6 +1,3 @@
-console.log('[CASCADE DEBUG] collect-visitor route.ts loaded');
-console.log('SUPABASE_URL', process.env.SUPABASE_URL);
-console.log('SUPABASE_SERVICE_ROLE_KEY', process.env.SUPABASE_SERVICE_ROLE_KEY);
 import { NextResponse } from 'next/server'
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -13,6 +10,8 @@ import { velocityCount } from '@/lib/velocity'
 import { computeRisk } from '@/lib/risk'
 import { supabaseServer } from '@/lib/supabaseServer'
 import { v5 as uuidv5 } from 'uuid';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // OSS Tor/Proxy/Disposable Email helpers (module scope for ES5 strict mode)
 export async function ipInList(ip: string, file: string): Promise<boolean> {
@@ -32,14 +31,10 @@ export async function emailIsDisposable(email: string, file: string): Promise<bo
     const { readFile } = await import('fs/promises');
     const data = await readFile(file, 'utf8');
     if (domain === 'zzz.com' || domain === 'gmail.com') {
-      // Log file path
-      console.log('[DISPOSABLE FILE PATH]', file);
+    
       // Log first and last 20 lines
       const lines = data.split('\n');
-      console.log('[DISPOSABLE FILE HEAD]', lines.slice(0, 20));
-      console.log('[DISPOSABLE FILE TAIL]', lines.slice(-20));
-      // Log last 200 chars
-      console.log('[DISPOSABLE RAW FILE]', JSON.stringify(data.slice(-200)), 'LENGTH:', data.length);
+
     }
     // Defensive: trim domain and all set values
     // Remove invisible characters and normalize lines
@@ -98,7 +93,40 @@ export const POST = withCORS(async function POST(req: Request) {
     if (!ip) return NextResponse.json({ error: 'IP not found' }, { status: 400 })
 
     // OSS Tor/Proxy/Disposable Email checks
+    // Lookup site_id, repeat_signup_limit, user_id, and trial abuse settings from sites table using api_key
+    const { data: siteRow, error: siteError } = await supabaseServer.from('sites').select('id, repeat_signup_limit, user_id, auto_block_trial_abuse, trial_abuse_threshold').eq('api_key', siteKey).maybeSingle();
+    if (!siteRow || siteError) {
+      return NextResponse.json({ error: 'invalid_site_key', details: 'Site not found for provided siteKey' }, { status: 400 });
+    }
+    // Check API usage quota BEFORE running any expensive operations
+    let quotaExceeded = false;
+    if (siteRow.user_id) {
+      const { data: usageRows, error: usageFetchErr } = await supabaseServer
+        .from('user_api_usage')
+        .select('used, quota, cycle_end')
+        .eq('user_id', siteRow.user_id)
+        .limit(1);
+      if (usageFetchErr) {
+        console.error('[COLLECT-VISITOR][USAGE] Failed to fetch usage row:', usageFetchErr, { user_id: siteRow.user_id });
+      }
+      if (usageRows && usageRows.length > 0) {
+        const { used, quota, cycle_end } = usageRows[0];
+        const now = new Date();
+        if (!cycle_end || new Date(cycle_end) < now) {
+          quotaExceeded = true;
+        } else if (quota > 0 && used >= quota) {
+          quotaExceeded = true;
+        }
+      }
+    }
+    if (quotaExceeded) {
+      return NextResponse.json({ error: 'quota_exceeded', details: 'API quota reached for this account.' }, { status: 429 });
+    }
+    // The rest of the handler now just uses siteRow; do not redeclare or re-check quota below.
+
     // OSS Tor/Proxy/Disposable Email checks (async, robust)
+    // Use correct path for disposable email domains
+    // Correct path to disposable-email-domains.txt from monorepo root
     // Use correct path for disposable email domains
     // Correct path to disposable-email-domains.txt from monorepo root
     const disposableFilePath = path.resolve(process.cwd(), '../../packages/disposable-email-domains.txt');
@@ -188,7 +216,6 @@ export const POST = withCORS(async function POST(req: Request) {
     }
 
     // Lookup site_id, repeat_signup_limit, user_id, and trial abuse settings from sites table using api_key
-    const { data: siteRow, error: siteError } = await supabaseServer.from('sites').select('id, repeat_signup_limit, user_id, auto_block_trial_abuse, trial_abuse_threshold').eq('api_key', siteKey).maybeSingle();
     console.log('[DEBUG siteKey]', siteKey);
     console.log('[DEBUG siteRow FULL]', JSON.stringify(siteRow));
     console.log('[DEBUG siteRow.auto_block_trial_abuse]', siteRow ? siteRow.auto_block_trial_abuse : undefined);
@@ -200,7 +227,6 @@ export const POST = withCORS(async function POST(req: Request) {
     const trialAbuseThreshold = siteRow.trial_abuse_threshold ?? 2; // Default threshold = 2
 
     // Check API usage quota BEFORE running IPInfo or event insert
-    let quotaExceeded = false;
     if (siteRow.user_id) {
       const { data: usageRows, error: usageFetchErr } = await supabaseServer
         .from('user_api_usage')

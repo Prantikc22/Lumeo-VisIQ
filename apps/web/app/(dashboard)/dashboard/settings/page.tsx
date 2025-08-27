@@ -13,7 +13,6 @@ export default function SettingsPage() {
 
       setLoading(true);
 
-      // ✅ include the session access_token so API can identify the user
       const { data: { session } } = await browserSupabase.auth.getSession();
       const token = session?.access_token;
 
@@ -23,15 +22,6 @@ export default function SettingsPage() {
       const json = await res.json();
       setBilling(json);
       setLoading(false);
-
-      // Inject Chargebee portal script if not already present
-      if (!document.querySelector('script[data-cb-site="logicwerk"]')) {
-        const script = document.createElement('script');
-        script.src = "https://js.chargebee.com/v2/chargebee.js";
-        script.setAttribute('data-cb-site', 'logicwerk');
-        script.async = true;
-        document.head.appendChild(script);
-      }
     })();
   }, [tab])
 
@@ -61,7 +51,6 @@ function GeneralTab() {
   const [threshold, setThreshold] = useState(2);
   const [saving, setSaving] = useState(false);
 
-  // Fetch all sites on mount
   useEffect(() => {
     browserSupabase.auth.getUser().then(res => setUser(res.data.user));
     fetch("/api/sites").then(r => r.json()).then(data => {
@@ -75,7 +64,6 @@ function GeneralTab() {
     });
   }, []);
 
-  // When site changes, update settings fields
   useEffect(() => {
     if (!site) return;
     setWebhook(site.webhook_url || "");
@@ -96,7 +84,6 @@ function GeneralTab() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ auto_block_trial_abuse: autoBlock, trial_abuse_threshold: threshold })
     });
-    // Refresh site list to get updated values
     const res = await fetch("/api/sites");
     const data = await res.json();
     setSites(data.sites);
@@ -198,7 +185,7 @@ function BillingTab({ billing, loading }: { billing: any, loading: boolean }) {
             try {
               const { data: { session } } = await browserSupabase.auth.getSession();
               if (!session) throw new Error('Not logged in');
-              const res = await fetch('/api/chargebee/portal', {
+              const res = await fetch('/api/dodo/portal', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email: session.user.email })
@@ -219,33 +206,10 @@ function BillingTab({ billing, loading }: { billing: any, loading: boolean }) {
         <button
           className="bg-green-600 text-white px-4 py-2 rounded inline-block"
           disabled={loading}
-          onClick={async () => {
-            try {
-              const { data: { session } } = await browserSupabase.auth.getSession();
-              if (!session) throw new Error('Not logged in');
-              const res = await fetch('/api/chargebee/portal', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: session.user.email })
-              });
-              const json = await res.json();
-              if (json.url) {
-                window.open(json.url, '_blank');
-              } else {
-                alert(json.error || 'Failed to open portal');
-              }
-            } catch (e: any) {
-              alert(e.message || 'Failed to open portal');
-            }
-          }}
+          onClick={() => { window.location.href = "/pricing"; }}
         >
-          {loading ? 'Opening...' : 'Upgrade Plan'}
+          Upgrade Plan
         </button>
-      </div>
-
-      <div className="bg-white p-4 rounded shadow">
-        <div className="font-semibold mb-2">Billing History</div>
-        <div className="text-gray-400">(stub)</div>
       </div>
     </div>
   )
