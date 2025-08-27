@@ -42,6 +42,7 @@ export async function tokenBucket(key: string, capacity = 60, refillPerSec = 1):
     redis.call('EXPIRE', KEYS[1], 3600)
     return {allowed, tokens}
   `
-  const [allowed, remaining] = await redis.eval(lua, 1, bucketKey, now, capacity, now, refillPerSec)
+  const result = await redis.eval(lua, 1, bucketKey, now, capacity, now, refillPerSec) as unknown;
+  const [allowed, remaining] = Array.isArray(result) ? result : [undefined, undefined];
   return { allowed: !!allowed, remaining: Number(remaining) }
 }

@@ -1,6 +1,5 @@
 "use client";
 import React from "react";
-import { NavBarBrut } from "../../components/landing/NavBarBrut";
 import { NavBarModern } from "../../components/ui/navbar-modern";
 import { HeroSection } from "@/components/ui/hero-section-1";
 import { MarqueeLogos } from "../../components/landing/MarqueeLogos";
@@ -11,8 +10,6 @@ import CTAStatsSection from "../../components/cta-stats-section";
 import TestimonialsSection from "../../components/testimonials-section";
 import PricingSection from "../../components/landing/PricingTeaser";
 import { FooterModern } from "../../components/ui/footer-modern";
-import { FooterMega } from "../../components/landing/FooterMega";
-import Link from "next/link";
 
 // --- Lumeo VisIQ Branding ---
 const BRAND = {

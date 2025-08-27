@@ -6,6 +6,14 @@ import { AnimatedGroup } from '@/components/ui/animated-group';
 import { cn } from '@/lib/utils';
 
 const transitionVariants = {
+  container: {
+    hidden: {},
+    visible: {
+      transition: {
+        staggerChildren: 0.1,
+      },
+    },
+  },
   item: {
     hidden: {
       opacity: 0,
@@ -17,7 +25,7 @@ const transitionVariants = {
       filter: 'blur(0px)',
       y: 0,
       transition: {
-        type: 'spring',
+        type: 'spring' as const,
         bounce: 0.3,
         duration: 1.5,
       },
@@ -60,6 +68,7 @@ export function HeroSection() {
         {/* CTAs */}
         <AnimatedGroup
           variants={{
+            ...transitionVariants,
             container: {
               visible: {
                 transition: {
@@ -68,7 +77,6 @@ export function HeroSection() {
                 },
               },
             },
-            ...transitionVariants,
           }}
           className="mt-12 flex flex-col items-center justify-center gap-3 md:flex-row">
           <Button asChild size="lg" className="rounded-xl px-6 text-base font-semibold">
