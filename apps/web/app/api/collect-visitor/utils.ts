@@ -1,4 +1,5 @@
 // Utility functions for collect-visitor route
+export const runtime = 'nodejs';
 export async function ipInList(ip: string, file: string): Promise<boolean> {
   try {
     const { readFile } = await import('fs/promises');

@@ -1,4 +1,5 @@
 // TODO: Add auth check when ready
+export const runtime = 'nodejs';
 import { NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabaseServer'
 import { stringify } from 'csv-stringify/sync'
